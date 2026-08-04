@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "synergy-remote",
+  "version": "0.1.0",
+  "description": "Secure remote access to Synergy via Tailscale",
+  "type": "module",
+  "source": "./src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "dev": "bun ../synergy/packages/plugin-kit/src/cli.ts dev",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun ../synergy/packages/plugin-kit/src/cli.ts build",
+    "validate": "bun ../synergy/packages/plugin-kit/src/cli.ts validate --runtime-discovery",
+    "pack": "bun ../synergy/packages/plugin-kit/src/cli.ts pack"
+  },
+  "dependencies": {
+    "@ericsanchezok/synergy-plugin": "^3.0.11",
+    "solid-js": "^1.9.10",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@ericsanchezok/synergy-plugin-kit": "^3.0.11",
+    "@types/bun": "^1.3.14",
+    "typescript": "^5.8.2"
+  }
+}

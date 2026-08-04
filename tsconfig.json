@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@ericsanchezok/synergy-plugin": [
+        "../synergy/packages/plugin/src/index.ts"
+      ],
+      "@ericsanchezok/synergy-plugin/*": ["../synergy/packages/plugin/src/*"]
+    },
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["bun"]
+  },
+  "include": ["src", "test"]
+}

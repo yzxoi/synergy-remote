@@ -5,12 +5,14 @@ import type {
 
 export type RemoteAccessPhase =
   | "not_installed"
+  | "installing"
   | "signed_out"
   | "offline"
   | "ready"
   | "active"
   | "conflict"
   | "error";
+
 
 export type RemoteAccessStatus = {
   provider: "tailscale";
@@ -19,6 +21,8 @@ export type RemoteAccessStatus = {
   installed: boolean;
   loggedIn: boolean;
   online: boolean;
+  installAttempted: boolean;
+  installMode?: "automatic" | "guided";
   version?: string;
   deviceName?: string;
   tailnetName?: string;

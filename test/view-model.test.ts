@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   canEnable,
+  copy,
+  installAction,
   localeFromLanguage,
   needsCustomPort,
+  phaseTone,
   validCustomPort,
 } from "../src/view-model";
 import type { RemoteAccessStatus } from "../src/types";
@@ -14,6 +17,7 @@ const ready: RemoteAccessStatus = {
   installed: true,
   loggedIn: true,
   online: true,
+  installAttempted: true,
 };
 
 describe("remote settings view model", () => {
@@ -50,3 +54,42 @@ describe("remote settings view model", () => {
     expect(validCustomPort("not-a-port")).toBe(false);
   });
 });
+
+  test("offers install, waiting, or nothing based on install state", () => {
+    expect(
+      installAction({
+        ...ready,
+        phase: "not_installed",
+        installed: false,
+        installAttempted: false,
+      }),
+    ).toBe("install");
+    expect(
+      installAction({
+        ...ready,
+        phase: "installing",
+        installed: false,
+        installAttempted: true,
+      }),
+    ).toBe("waiting");
+    expect(installAction(ready)).toBe("none");
+  });
+
+  test("every phase has a tone and descriptions in both locales", () => {
+    const phases = [
+      "not_installed",
+      "installing",
+      "signed_out",
+      "offline",
+      "ready",
+      "active",
+      "conflict",
+      "error",
+    ] as const;
+    for (const phase of phases) {
+      expect(phaseTone[phase]).toBeTruthy();
+      expect(copy.en.phaseDescriptions[phase]).toBeTruthy();
+      expect(copy["zh-CN"].phaseDescriptions[phase]).toBeTruthy();
+      expect(copy.en.installingSteps.generic).toBeTruthy();
+    }
+  });

@@ -22,7 +22,7 @@ Synergy Remote does not create a public endpoint, never enables Tailscale Funnel
    ```
 
 2. Open **Settings → Plugins → Remote Access**.
-3. Complete the official Tailscale installer and sign-in flow. A fresh plugin install tries the platform installer once; if it cannot do so, it opens the official installation page.
+3. Complete the official Tailscale installer and sign-in flow. A fresh plugin install tries the platform installer once; if it cannot do so, it opens the official installation page. The settings panel switches to an in-progress install state while Tailscale is being installed; finish the installer in the window or page it opened, and use **Retry install** if nothing opened.
 4. Select **Enable Remote Access** and approve the warning.
 5. Open the displayed HTTPS address from another device in the same tailnet.
 

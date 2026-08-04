@@ -37,6 +37,7 @@ export class TailscaleManager {
       adapter: TailscaleAdapter;
       endpoint: () => RuntimeEndpoint | undefined;
       state: StateStore;
+      installMode?: () => "automatic" | "guided" | undefined;
     },
   ) {}
 
@@ -62,21 +63,27 @@ export class TailscaleManager {
   async enable(
     input: { httpsPort?: number } = {},
   ): Promise<RemoteAccessStatus> {
+    const state = await this.dependencies.state.read();
     const endpoint = this.dependencies.endpoint();
     if (!endpoint || !safeEndpoint(endpoint.url)) {
       return errorStatus(
         "UNSAFE_LISTENER",
         "Remote Access requires Synergy to listen on loopback only.",
+        {},
+        state.enabled,
+        state.installAttempted,
       );
     }
     if (input.httpsPort !== undefined && !validHttpsPort(input.httpsPort)) {
       return errorStatus(
         "INVALID_PORT",
         "HTTPS port must be 443 or an integer between 1024 and 65535.",
+        {},
+        state.enabled,
+        state.installAttempted,
       );
     }
 
-    const state = await this.dependencies.state.read();
     const snapshot = await this.snapshot();
     if (
       !snapshot.installed ||
@@ -122,6 +129,7 @@ export class TailscaleManager {
         conciseError(result),
         snapshot,
         state.enabled,
+        state.installAttempted,
       );
     }
 
@@ -178,6 +186,7 @@ export class TailscaleManager {
           conciseError(result),
           snapshot,
           state.enabled,
+          state.installAttempted,
         );
       }
     }
@@ -271,18 +280,26 @@ export class TailscaleManager {
     snapshot: Snapshot,
     state: RemoteAccessState,
   ): RemoteAccessStatus {
+    const installMode = this.dependencies.installMode?.();
     const base = {
       provider: "tailscale" as const,
       desiredEnabled: state.enabled,
       installed: snapshot.installed,
       loggedIn: snapshot.loggedIn,
       online: snapshot.online,
+      installAttempted: state.installAttempted,
+      ...(installMode ? { installMode } : {}),
       ...(snapshot.version ? { version: snapshot.version } : {}),
       ...(snapshot.deviceName ? { deviceName: snapshot.deviceName } : {}),
       ...(snapshot.tailnetName ? { tailnetName: snapshot.tailnetName } : {}),
       ...(state.httpsPort !== undefined ? { httpsPort: state.httpsPort } : {}),
     };
-    if (!snapshot.installed) return { ...base, phase: "not_installed" };
+    if (!snapshot.installed) {
+      return {
+        ...base,
+        phase: state.installAttempted ? "installing" : "not_installed",
+      };
+    }
     if (snapshot.errorCode)
       return {
         ...base,
@@ -389,6 +406,7 @@ function errorStatus(
   message: string,
   snapshot: Partial<Snapshot> = {},
   desiredEnabled = false,
+  installAttempted = false,
 ): RemoteAccessStatus {
   return {
     provider: "tailscale",
@@ -397,6 +415,7 @@ function errorStatus(
     installed: snapshot.installed ?? false,
     loggedIn: snapshot.loggedIn ?? false,
     online: snapshot.online ?? false,
+    installAttempted,
     errorCode,
     message,
   };
@@ -415,6 +434,7 @@ function conflictStatus(
     installed: snapshot.installed,
     loggedIn: snapshot.loggedIn,
     online: snapshot.online,
+    installAttempted: state.installAttempted,
     ...(state.httpsPort !== undefined ? { httpsPort: state.httpsPort } : {}),
     conflictPorts,
     errorCode: "SERVE_PORT_CONFLICT",

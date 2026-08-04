@@ -18,6 +18,7 @@ const Status = z
     provider: z.literal("tailscale"),
     phase: z.enum([
       "not_installed",
+      "installing",
       "signed_out",
       "offline",
       "ready",
@@ -29,6 +30,8 @@ const Status = z
     installed: z.boolean(),
     loggedIn: z.boolean(),
     online: z.boolean(),
+    installAttempted: z.boolean(),
+    installMode: z.enum(["automatic", "guided"]).optional(),
     version: z.string().optional(),
     deviceName: z.string().optional(),
     tailnetName: z.string().optional(),
@@ -39,6 +42,8 @@ const Status = z
     message: z.string().optional(),
   })
   .strict();
+
+export const StatusSchema = Status;
 
 const requirements = [
   "runtime.endpoint.read",
@@ -71,6 +76,7 @@ const installContribution = lifecycleInstall({
   async handler(context: PluginInvocationContext) {
     const typed = await prepare(context, false);
     const result = await remoteRuntime.manager().install();
+    remoteRuntime.setInstallMode(result.launched ? result.mode : undefined);
     await sync(typed);
     if (result.launched) void remoteRuntime.watchInstallation();
   },
@@ -118,6 +124,7 @@ export const plugin = definePlugin({
       async handler(_input, context) {
         const typed = await prepare(context, false);
         const result = await remoteRuntime.manager().install(true);
+        remoteRuntime.setInstallMode(result.launched ? result.mode : undefined);
         await sync(typed);
         if (result.launched) void remoteRuntime.watchInstallation();
         return result;

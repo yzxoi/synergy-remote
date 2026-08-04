@@ -27,6 +27,8 @@ export class RemoteRuntimeController {
   private stopped = true;
   private delayMs = 5_000;
   private endpoint: RuntimeEndpoint | undefined;
+  private installMode: "automatic" | "guided" | undefined;
+
 
   constructor(
     readonly state = new RemoteStateStore(),
@@ -39,7 +41,12 @@ export class RemoteRuntimeController {
       adapter: this.adapter,
       state: this.state,
       endpoint: () => this.endpoint,
+      installMode: () => this.installMode,
     });
+  }
+
+  setInstallMode(mode: "automatic" | "guided" | undefined) {
+    this.installMode = mode;
   }
 
   setEndpoint(endpoint: RuntimeEndpoint) {

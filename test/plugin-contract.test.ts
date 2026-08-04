@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { compilePluginManifest } from "@ericsanchezok/synergy-plugin";
-import plugin from "../src/index";
+import plugin, { StatusSchema } from "../src/index";
 
 describe("Synergy Remote plugin contract", () => {
   const manifest = compilePluginManifest(plugin, {
@@ -75,3 +75,17 @@ describe("Synergy Remote plugin contract", () => {
     });
   });
 });
+
+  test("status schema carries install progress fields", () => {
+    const status = StatusSchema.parse({
+      provider: "tailscale",
+      phase: "installing",
+      desiredEnabled: false,
+      installed: false,
+      loggedIn: false,
+      online: false,
+      installAttempted: true,
+    });
+    expect(status.phase).toBe("installing");
+    expect(status.installAttempted).toBe(true);
+  });

@@ -9,6 +9,7 @@ const ready: RemoteAccessStatus = {
   installed: true,
   loggedIn: true,
   online: true,
+  installAttempted: true,
 };
 
 describe("remote settings controller", () => {
@@ -155,3 +156,45 @@ describe("remote settings controller", () => {
     expect(statuses).toEqual([ready]);
   });
 });
+
+  test("surfaces the install launch result including mode", async () => {
+    const results: Array<{ launched: boolean; mode: "automatic" | "guided" }> =
+      [];
+    const runner = createActionRunner({
+      operations: {
+        query: async () => ready,
+        command: async () => ({ launched: false, mode: "guided" as const }),
+      },
+      confirm: async () => true,
+      onBusy: () => {},
+      onStatus: () => {},
+      onError: () => {},
+      onLaunched: () => {},
+      onInstallResult: (result) => results.push(result),
+      refresh: async () => {},
+    });
+
+    await runner.run("remote.install");
+    expect(results).toEqual([{ launched: false, mode: "guided" }]);
+  });
+
+  test("notifies onLaunched for launch-only results like login", async () => {
+    let launched = 0;
+    const runner = createActionRunner({
+      operations: {
+        query: async () => ready,
+        command: async () => ({ launched: true }),
+      },
+      confirm: async () => true,
+      onBusy: () => {},
+      onStatus: () => {},
+      onError: () => {},
+      onLaunched: () => {
+        launched++;
+      },
+      refresh: async () => {},
+    });
+
+    await runner.run("remote.login");
+    expect(launched).toBe(1);
+  });

@@ -23,7 +23,6 @@ export function createStatusPolling(input: {
 }) {
   let controller: AbortController | undefined;
   let timer: unknown;
-
   async function refresh() {
     controller?.abort();
     const current = new AbortController();
@@ -77,6 +76,10 @@ export function createActionRunner(input: {
   onStatus(status: RemoteAccessStatus): void;
   onError(error: string | undefined): void;
   onLaunched(): void;
+  onInstallResult?(result: {
+    launched: boolean;
+    mode: "automatic" | "guided";
+  }): void;
   refresh(): Promise<void>;
 }) {
   let busy = false;
@@ -97,8 +100,13 @@ export function createActionRunner(input: {
   async function execute(id: string, value: Record<string, unknown>) {
     try {
       const result = (await input.operations.command(id, value)) as
-        RemoteAccessStatus | { launched: boolean };
+        | RemoteAccessStatus
+        | { launched: boolean; mode?: "automatic" | "guided" };
       if ("phase" in result) input.onStatus(result);
+      else if ("mode" in result)
+        input.onInstallResult?.(
+          result as { launched: boolean; mode: "automatic" | "guided" },
+        );
       else if (result.launched) input.onLaunched();
       await input.refresh();
       return true;

@@ -8,6 +8,7 @@ function fixture(
     routes?: Record<string, unknown>;
     state?: RemoteAccessState;
     endpoint?: string;
+    notInstalled?: boolean;
   } = {},
 ) {
   let state = input.state ?? { enabled: false, installAttempted: false };
@@ -16,7 +17,8 @@ function fixture(
   const commands: string[][] = [];
   const adapter: TailscaleAdapter = {
     platform: "linux",
-    executable: async () => "/usr/bin/tailscale",
+    executable: async () =>
+      input.notInstalled ? undefined : "/usr/bin/tailscale",
     install: async () => {
       installs++;
       return { launched: true, mode: "automatic" };
@@ -225,5 +227,35 @@ describe("TailscaleManager", () => {
     expect(item.installs()).toBe(1);
     await item.manager.install(true);
     expect(item.installs()).toBe(2);
+  });
+
+  test("reports installing only after an install attempt", async () => {
+    const fresh = fixture({ notInstalled: true });
+    await expect(fresh.manager.status()).resolves.toMatchObject({
+      phase: "not_installed",
+      installed: false,
+      installAttempted: false,
+    });
+
+    const started = fixture({
+      notInstalled: true,
+      state: { enabled: false, installAttempted: true },
+    });
+    await expect(started.manager.status()).resolves.toMatchObject({
+      phase: "installing",
+      installed: false,
+      installAttempted: true,
+    });
+  });
+
+  test("leaves installing once Tailscale is installed", async () => {
+    const item = fixture({
+      state: { enabled: false, installAttempted: true },
+    });
+    await expect(item.manager.status()).resolves.toMatchObject({
+      phase: "ready",
+      installed: true,
+      installAttempted: true,
+    });
   });
 });

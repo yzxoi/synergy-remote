@@ -38,7 +38,8 @@ describe("SystemTailscaleAdapter", () => {
         mode: "automatic",
       });
       expect(automatic.launched[0]?.command).toBe("osascript");
-      expect(automatic.launched[0]?.args.join(" ")).toContain("open \"$pkg\"");
+      expect(automatic.launched[0]?.args.join(" ")).toContain("open");
+      expect(automatic.launched[0]?.args.join(" ")).toContain("Tailscale.app");
     } finally {
       process.env.PATH = previous;
     }

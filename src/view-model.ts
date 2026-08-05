@@ -62,22 +62,6 @@ export function setupSteps(
 ): SetupStep[] {
   const text = copy[locale];
   const phase = status?.phase ?? "not_installed";
-  const currentIndex =
-    phase === "not_installed"
-      ? 0
-      : phase === "installing"
-        ? 1
-        : phase === "signed_out" || phase === "offline"
-          ? 2
-          : phase === "ready" ||
-              phase === "conflict" ||
-              phase === "error" ||
-              phase === "active"
-            ? phase === "active"
-              ? 3
-              : 3
-            : 0;
-
   const activeIndex =
     phase === "active"
       ? 3

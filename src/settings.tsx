@@ -15,13 +15,75 @@ import {
   installModeLabel,
   localeFromLanguage,
   needsCustomPort,
-  phaseTone,
   setupSteps,
   validCustomPort,
   type SetupStepState,
 } from "./view-model";
 import type { RemoteAccessStatus, RemoteSettingsComponentProps } from "./types";
 import { createActionRunner, createStatusPolling } from "./controller";
+
+const STYLES = `
+.sr-settings{box-sizing:border-box;width:min(100%,920px);color:var(--text-base);font-family:var(--font-family-sans,system-ui,sans-serif);font-size:var(--type-ui-body-size,.875rem);line-height:var(--type-ui-body-line-height,1.5)}
+.sr-settings *,.sr-settings *::before,.sr-settings *::after{box-sizing:border-box}
+.sr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid color-mix(in srgb,var(--border-base) 42%,transparent);margin-bottom:18px}
+.sr-eyebrow{margin:0 0 8px;color:var(--text-interactive-base,var(--text-strong));font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.sr-title{margin:0;color:var(--text-strong);font-size:clamp(1.35rem,1.1rem + .6vw,1.75rem);line-height:1.2;font-weight:650;letter-spacing:-.02em}
+.sr-intro{max-width:54ch;margin:8px 0 0;color:var(--text-weak);line-height:1.55}
+.sr-pill{display:inline-flex;align-items:center;gap:8px;min-height:30px;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent);background:var(--surface-inset-base,var(--surface-raised-base));color:var(--text-weak);font-size:12px;font-weight:650;white-space:nowrap}
+.sr-pill[data-tone=warning]{background:color-mix(in srgb,var(--surface-warning-weak,var(--surface-inset-base)) 82%,transparent);border-color:color-mix(in srgb,var(--surface-warning-strong,var(--border-base)) 35%,transparent);color:color-mix(in srgb,var(--surface-warning-strong,var(--text-strong)) 78%,var(--text-strong))}
+.sr-pill[data-tone=success]{background:color-mix(in srgb,var(--surface-success-weak,var(--surface-inset-base)) 82%,transparent);border-color:color-mix(in srgb,var(--surface-success-strong,var(--border-base)) 30%,transparent);color:color-mix(in srgb,var(--surface-success-strong,var(--text-strong)) 78%,var(--text-strong))}
+.sr-pill[data-tone=critical]{background:color-mix(in srgb,var(--surface-critical-weak,var(--surface-inset-base)) 82%,transparent);border-color:color-mix(in srgb,var(--surface-critical-strong,var(--border-base)) 30%,transparent);color:color-mix(in srgb,var(--surface-critical-strong,var(--text-strong)) 78%,var(--text-strong))}
+.sr-dot{width:8px;height:8px;border-radius:999px;background:currentColor}
+.sr-dot[data-pulse=true]{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 45%,transparent);animation:sr-pulse 1.8s ease-out infinite}
+@keyframes sr-pulse{70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.sr-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(15rem,.9fr);gap:14px}
+.sr-grid[data-single=true]{grid-template-columns:minmax(0,1fr)}
+.sr-card{display:flex;flex-direction:column;gap:16px;padding:18px;border:1px solid color-mix(in srgb,var(--border-base) 55%,transparent);border-radius:18px;background:var(--surface-base)}
+.sr-card[data-soft=true]{background:var(--surface-raised-base,var(--surface-inset-base))}
+.sr-card-title{margin:0;color:var(--text-strong);font-size:15px;font-weight:650}
+.sr-card-copy{margin:6px 0 0;color:var(--text-weak);line-height:1.5}
+.sr-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.sr-step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px}
+.sr-step-rail{position:relative;display:flex;justify-content:center}
+.sr-step-rail::after{content:"";position:absolute;top:28px;bottom:0;width:1px;background:color-mix(in srgb,var(--border-base) 55%,transparent)}
+.sr-step:last-child .sr-step-rail::after{display:none}
+.sr-marker{position:relative;z-index:1;display:grid;place-items:center;width:28px;height:28px;border-radius:999px;border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent);background:var(--surface-base);color:var(--text-weaker,var(--text-weak));font-size:12px;font-weight:700}
+.sr-marker[data-state=done]{background:color-mix(in srgb,var(--surface-success-weak,var(--surface-inset-base)) 88%,transparent);border-color:color-mix(in srgb,var(--surface-success-strong,var(--border-base)) 35%,transparent);color:color-mix(in srgb,var(--surface-success-strong,var(--text-strong)) 80%,var(--text-strong))}
+.sr-marker[data-state=current]{background:var(--surface-interactive-solid,var(--text-strong));border-color:var(--surface-interactive-solid,var(--text-strong));color:var(--text-on-interactive-base,#fff)}
+.sr-step-body{padding-bottom:16px}
+.sr-step:last-child .sr-step-body{padding-bottom:0}
+.sr-step-title{color:var(--text-strong);font-size:13px;font-weight:650}
+.sr-step[data-state=pending] .sr-step-title,.sr-step[data-state=pending] .sr-step-copy{color:var(--text-weaker,var(--text-weak))}
+.sr-step-copy{margin:2px 0 0;color:var(--text-weak);font-size:12px;line-height:1.45}
+.sr-callout{padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--border-base) 48%,transparent);background:var(--surface-raised-base,var(--surface-inset-base))}
+.sr-callout strong{display:block;margin-bottom:8px;color:var(--text-strong);font-size:13px}
+.sr-callout ul{margin:0;padding-left:18px;color:var(--text-weak);font-size:12.5px;line-height:1.55}
+.sr-callout li+li{margin-top:4px}
+.sr-actions{display:flex;flex-wrap:wrap;gap:10px}
+.sr-btn{appearance:none;border:0;border-radius:12px;min-height:40px;padding:0 14px;font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.sr-btn:disabled{opacity:.72;cursor:default}
+.sr-btn-primary{background:var(--surface-interactive-solid,var(--text-strong));color:var(--text-on-interactive-base,#fff)}
+.sr-btn-secondary{background:var(--surface-base);color:var(--text-strong);border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent)}
+.sr-btn-ghost{background:transparent;color:var(--text-weak)}
+.sr-meta{display:grid;gap:10px}
+.sr-meta-row{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border-base) 40%,transparent);background:var(--surface-base);font-size:12.5px}
+.sr-meta-row dt{color:var(--text-weaker,var(--text-weak))}
+.sr-meta-row dd{margin:0;color:var(--text-strong);font-weight:650;text-align:right}
+.sr-url{display:flex;flex-direction:column;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--border-base) 48%,transparent);background:var(--surface-raised-base,var(--surface-inset-base))}
+.sr-url code{overflow-wrap:anywhere;color:var(--text-strong);font-size:13px}
+.sr-field{display:flex;flex-direction:column;gap:8px;max-width:16rem;color:var(--text-strong);font-size:13px;font-weight:600}
+.sr-field input{height:40px;border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent);border-radius:12px;background:var(--input-base,var(--surface-base));color:var(--text-strong);padding:0 12px;font:inherit}
+.sr-error{margin:0;color:color-mix(in srgb,var(--surface-critical-strong,var(--text-strong)) 82%,var(--text-strong));font-size:13px}
+.sr-safety{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;margin-top:14px;padding:14px 16px;border-radius:16px;border:1px solid color-mix(in srgb,var(--border-base) 48%,transparent);background:var(--surface-raised-base,var(--surface-inset-base))}
+.sr-shield{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:color-mix(in srgb,var(--surface-interactive-base,var(--surface-inset-base)) 70%,transparent);color:var(--text-interactive-base,var(--text-strong));font-size:16px}
+.sr-safety h3{margin:0;color:var(--text-strong);font-size:13px}
+.sr-safety p{margin:4px 0 0;color:var(--text-weak);font-size:12.5px;line-height:1.5}
+.sr-link{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent);color:var(--text-strong);text-decoration:none;font-size:13px;font-weight:650}
+@media (max-width:860px){
+  .sr-grid{grid-template-columns:minmax(0,1fr)}
+  .sr-header{flex-direction:column}
+}
+`;
 
 const Settings: Component<RemoteSettingsComponentProps> = (props) => {
   const locale = localeFromLanguage(
@@ -32,28 +94,6 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
   const [busy, setBusy] = createSignal<string>();
   const [error, setError] = createSignal<string>();
   const [customPort, setCustomPort] = createSignal("1024");
-
-  const toneClass = createMemo(() => {
-    const tone = status() ? phaseTone[status()!.phase] : "muted";
-    if (tone === "success") return "text-icon-success-base";
-    if (tone === "warning") return "text-icon-warning-base";
-    if (tone === "critical") return "text-icon-critical-base";
-    return "text-text-weak";
-  });
-
-  const pillClass = createMemo(() => {
-    const tone = status() ? phaseTone[status()!.phase] : "muted";
-    if (tone === "success") {
-      return "border-border-success-base bg-surface-success-base text-icon-success-base";
-    }
-    if (tone === "warning") {
-      return "border-border-warning-base bg-surface-warning-base text-icon-warning-base";
-    }
-    if (tone === "critical") {
-      return "border-border-critical-base bg-surface-critical-base text-icon-critical-base";
-    }
-    return "border-border-base bg-surface-raised-base text-text-weak";
-  });
 
   const polling = createStatusPolling({
     operations: props.context.operations,
@@ -121,45 +161,49 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
       [text.client, text.clientInstalled],
     ];
   });
-
-  const showSetup =
-    !status() ||
-    phase() === "not_installed" ||
-    phase() === "installing" ||
-    phase() === "signed_out" ||
-    phase() === "offline";
+  const showSetup = createMemo(
+    () =>
+      !status() ||
+      phase() === "not_installed" ||
+      phase() === "installing" ||
+      phase() === "signed_out" ||
+      phase() === "offline",
+  );
+  const tone = createMemo(() => {
+    const current = phase();
+    if (current === "active" || current === "ready") return "success";
+    if (current === "error") return "critical";
+    if (
+      current === "installing" ||
+      current === "signed_out" ||
+      current === "offline" ||
+      current === "conflict"
+    ) {
+      return "warning";
+    }
+    return "muted";
+  });
 
   return (
-    <section class="flex w-full max-w-4xl flex-col gap-5" aria-label={text.title}>
-      <header class="flex items-start justify-between gap-4 border-b border-border-weak pb-4">
-        <div class="flex min-w-0 flex-col gap-2">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-interactive-base">
-            {text.eyebrow}
-          </p>
-          <div class="flex flex-col gap-1">
-            <h2 class="text-xl font-semibold tracking-tight text-text-strong">
-              {text.title}
-            </h2>
-            <p class="max-w-2xl text-sm leading-6 text-text-weak">{text.intro}</p>
-          </div>
+    <section class="sr-settings" aria-label={text.title}>
+      <style>{STYLES}</style>
+
+      <header class="sr-header">
+        <div>
+          <p class="sr-eyebrow">{text.eyebrow}</p>
+          <h2 class="sr-title">{text.title}</h2>
+          <p class="sr-intro">{text.intro}</p>
         </div>
         <Show
           when={status()}
-          fallback={
-            <span class="shrink-0 rounded-full border border-border-base px-3 py-1.5 text-xs font-medium text-text-weak">
-              …
-            </span>
-          }
+          fallback={<span class="sr-pill">…</span>}
         >
           {(current) => (
-            <span
-              class={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${pillClass()}`}
-            >
+            <span class="sr-pill" data-tone={tone()}>
               <span
+                class="sr-dot"
+                data-pulse={current().phase === "installing" ? "true" : "false"}
                 aria-hidden="true"
-                class={`h-1.5 w-1.5 rounded-full bg-current ${
-                  current().phase === "installing" ? "animate-pulse" : ""
-                }`}
               />
               {text.phases[current().phase]}
             </span>
@@ -167,56 +211,30 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
         </Show>
       </header>
 
-      <div
-        class={`grid gap-4 ${
-          showSetup ? "lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.9fr)]" : ""
-        }`}
-      >
-        <section class="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-base p-4">
-          <div class="flex flex-col gap-1">
-            <h3 class="text-sm font-semibold text-text-strong">
-              {showSetup ? text.installProgress : text.access}
+      <div class="sr-grid" data-single={showSetup() ? "false" : "true"}>
+        <section class="sr-card">
+          <div>
+            <h3 class="sr-card-title">
+              {showSetup() ? text.installProgress : text.access}
             </h3>
             <Show when={status()}>
-              <p class="text-sm leading-6 text-text-weak">
+              <p class="sr-card-copy">
                 {text.phaseDescriptions[status()!.phase]}
               </p>
             </Show>
           </div>
 
-          <Show when={showSetup}>
-            <ol class="flex flex-col" aria-label={text.installProgress}>
+          <Show when={showSetup()}>
+            <ol class="sr-steps" aria-label={text.installProgress}>
               <For each={steps()}>
                 {(step, index) => (
-                  <li class="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
-                    <div class="relative flex justify-center">
+                  <li class="sr-step" data-state={step.state}>
+                    <div class="sr-step-rail">
                       <StepMarker state={step.state} index={index() + 1} />
-                      <Show when={index() < steps().length - 1}>
-                        <span
-                          aria-hidden="true"
-                          class="absolute top-7 bottom-0 w-px bg-border-weak"
-                        />
-                      </Show>
                     </div>
-                    <div class={index() < steps().length - 1 ? "pb-4" : ""}>
-                      <div
-                        class={`text-sm font-semibold ${
-                          step.state === "pending"
-                            ? "text-text-weak"
-                            : "text-text-strong"
-                        }`}
-                      >
-                        {step.title}
-                      </div>
-                      <p
-                        class={`mt-0.5 text-xs leading-5 ${
-                          step.state === "pending"
-                            ? "text-text-weak"
-                            : "text-text-base"
-                        }`}
-                      >
-                        {step.body}
-                      </p>
+                    <div class="sr-step-body">
+                      <div class="sr-step-title">{step.title}</div>
+                      <p class="sr-step-copy">{step.body}</p>
                     </div>
                   </li>
                 )}
@@ -226,9 +244,9 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
 
           <Show when={status()?.publicUrl}>
             {(url) => (
-              <div class="flex flex-col gap-3 rounded-xl border border-border-base bg-surface-raised-base p-3">
-                <code class="break-all text-sm text-text-strong">{url()}</code>
-                <div class="flex flex-wrap gap-2">
+              <div class="sr-url">
+                <code>{url()}</code>
+                <div class="sr-actions">
                   <SecondaryButton
                     onClick={() => {
                       void navigator.clipboard
@@ -250,12 +268,7 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
                   >
                     {text.copy}
                   </SecondaryButton>
-                  <a
-                    class="inline-flex items-center rounded-xl border border-border-base px-3 py-2 text-sm font-semibold text-text-strong"
-                    href={url()}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
+                  <a class="sr-link" href={url()} rel="noreferrer" target="_blank">
                     {text.open}
                   </a>
                 </div>
@@ -264,10 +277,9 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
           </Show>
 
           <Show when={needsCustomPort(status())}>
-            <label class="flex max-w-xs flex-col gap-2 text-sm font-medium text-text-strong">
+            <label class="sr-field">
               {text.customPort}
               <input
-                class="rounded-xl border border-border-base bg-surface-base px-3 py-2 text-text-strong"
                 min="1024"
                 max="65535"
                 type="number"
@@ -277,26 +289,24 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
             </label>
           </Show>
 
-          <div class="rounded-xl border border-border-base bg-surface-raised-base p-3">
-            <div class="text-sm font-semibold text-text-strong">
+          <div class="sr-callout">
+            <strong>
               {phase() === "installing" || phase() === "not_installed"
                 ? text.nowDoTitle
                 : text.overview}
-            </div>
-            <ul class="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-text-weak">
-              <For each={[...nowDo()]}>
-                {(item) => <li>{item}</li>}
-              </For>
+            </strong>
+            <ul>
+              <For each={[...nowDo()]}>{(item) => <li>{item}</li>}</For>
             </ul>
           </div>
 
           <Show when={status()?.message || error()}>
-            <p class="text-sm text-icon-critical-base" role="alert">
+            <p class="sr-error" role="alert">
               {error() ?? status()?.message}
             </p>
           </Show>
 
-          <div class="flex flex-wrap gap-2">
+          <div class="sr-actions">
             <Show when={installAction(status()) === "install"}>
               <PrimaryButton
                 disabled={Boolean(busy())}
@@ -399,37 +409,31 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
           </div>
         </section>
 
-        <Show when={showSetup}>
-          <aside class="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-raised-base p-4">
-            <div class="flex flex-col gap-1">
-              <h3 class="text-sm font-semibold text-text-strong">
-                {text.installDetails}
-              </h3>
-              <p class="text-sm leading-6 text-text-weak">
+        <Show when={showSetup()}>
+          <aside class="sr-card" data-soft="true">
+            <div>
+              <h3 class="sr-card-title">{text.installDetails}</h3>
+              <p class="sr-card-copy">
                 {phase() === "installing"
                   ? text.phaseDescriptions.installing
                   : text.phaseDescriptions[status()?.phase ?? "not_installed"]}
               </p>
             </div>
 
-            <dl class="flex flex-col gap-2">
+            <dl class="sr-meta">
               <For each={detailRows()}>
                 {(row) => (
-                  <div class="flex items-center justify-between gap-3 rounded-xl border border-border-weak bg-surface-base px-3 py-2.5 text-xs">
-                    <dt class="text-text-weak">{row[0]}</dt>
-                    <dd class="truncate font-semibold text-text-strong">
-                      {row[1]}
-                    </dd>
+                  <div class="sr-meta-row">
+                    <dt>{row[0]}</dt>
+                    <dd>{row[1]}</dd>
                   </div>
                 )}
               </For>
             </dl>
 
-            <div class="rounded-xl border border-border-base bg-surface-base p-3">
-              <div class="text-sm font-semibold text-text-strong">
-                {text.afterInstallTitle}
-              </div>
-              <ul class="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-text-weak">
+            <div class="sr-callout">
+              <strong>{text.afterInstallTitle}</strong>
+              <ul>
                 <For each={[...text.afterInstall]}>
                   {(item) => <li>{item}</li>}
                 </For>
@@ -439,18 +443,13 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
         </Show>
       </div>
 
-      <aside class="flex items-start gap-3 rounded-2xl border border-border-base bg-surface-raised-base p-4">
-        <div
-          aria-hidden="true"
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-interactive-base text-sm font-semibold text-text-interactive-base"
-        >
+      <aside class="sr-safety">
+        <div class="sr-shield" aria-hidden="true">
           ⌀
         </div>
-        <div class="flex min-w-0 flex-col gap-1">
-          <h3 class="text-sm font-semibold text-text-strong">
-            {text.safetyTitle}
-          </h3>
-          <p class="text-sm leading-6 text-text-weak">
+        <div>
+          <h3>{text.safetyTitle}</h3>
+          <p>
             {phase() === "active" ? text.warning : text.warningBeforeEnable}
           </p>
         </div>
@@ -460,23 +459,9 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
 };
 
 function StepMarker(props: { state: SetupStepState; index: number }) {
-  if (props.state === "done") {
-    return (
-      <span class="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border-success-base bg-surface-success-base text-xs font-bold text-icon-success-base">
-        ✓
-      </span>
-    );
-  }
-  if (props.state === "current") {
-    return (
-      <span class="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-surface-interactive-solid text-xs font-bold text-text-on-interactive-base">
-        {props.index}
-      </span>
-    );
-  }
   return (
-    <span class="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border-base bg-surface-base text-xs font-bold text-text-weak">
-      {props.index}
+    <span class="sr-marker" data-state={props.state}>
+      {props.state === "done" ? "✓" : props.index}
     </span>
   );
 }
@@ -488,7 +473,7 @@ function PrimaryButton(props: {
 }) {
   return (
     <button
-      class="rounded-xl bg-surface-interactive-solid px-3.5 py-2 text-sm font-semibold text-text-on-interactive-base disabled:cursor-default disabled:opacity-70"
+      class="sr-btn sr-btn-primary"
       disabled={props.disabled}
       type="button"
       onClick={props.onClick}
@@ -505,7 +490,7 @@ function SecondaryButton(props: {
 }) {
   return (
     <button
-      class="rounded-xl border border-border-base bg-surface-base px-3.5 py-2 text-sm font-semibold text-text-strong disabled:cursor-default disabled:opacity-70"
+      class="sr-btn sr-btn-secondary"
       disabled={props.disabled}
       type="button"
       onClick={props.onClick}
@@ -522,7 +507,7 @@ function GhostButton(props: {
 }) {
   return (
     <button
-      class="rounded-xl px-3.5 py-2 text-sm font-semibold text-text-weak disabled:cursor-default disabled:opacity-70"
+      class="sr-btn sr-btn-ghost"
       disabled={props.disabled}
       type="button"
       onClick={props.onClick}

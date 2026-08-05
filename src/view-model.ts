@@ -198,6 +198,7 @@ export const copy = {
     copyFailed: "Copy failed. Select the address and copy it manually.",
     cancelled: "Action cancelled",
     nowDoTitle: "What to do now",
+    activeAccessTitle: "Access from another device",
     afterInstallTitle: "After install",
     currentPhase: "Current stage",
     installMethod: "Install method",
@@ -231,7 +232,7 @@ export const copy = {
       ready:
         "Tailscale is ready. Enable remote access to publish the private HTTPS address.",
       active:
-        "Remote access is active. Use the address below from another device in the same tailnet.",
+        "Remote access is active. On another device with Tailscale signed in to the same tailnet, open the address below.",
       conflict:
         "The preferred HTTPS ports are already used by another route. Choose a free port to continue.",
       error:
@@ -263,7 +264,8 @@ export const copy = {
         "Click Enable Remote Access to publish the private HTTPS address.",
       ],
       active: [
-        "Copy or open the address from another device on the same tailnet.",
+        "On the device you want to access from, install Tailscale and sign in with the same account or join the same tailnet.",
+        "Confirm that device is connected, then open the address above in its browser.",
         "Disable remote access here when you no longer need it.",
       ],
       conflict: [
@@ -347,6 +349,7 @@ export const copy = {
     copyFailed: "复制失败。请手动选中地址后复制。",
     cancelled: "操作已取消",
     nowDoTitle: "现在请做什么",
+    activeAccessTitle: "从其他设备访问",
     afterInstallTitle: "装好之后",
     currentPhase: "当前阶段",
     installMethod: "安装方式",
@@ -378,7 +381,7 @@ export const copy = {
       offline:
         "Tailscale 已安装但当前离线。请确保 Tailscale 正在运行并已连接。",
       ready: "Tailscale 已就绪。启用远程访问即可发布私有 HTTPS 地址。",
-      active: "远程访问已启用。请从同一 tailnet 中的其他设备打开下面的地址。",
+      active: "远程访问已启用。在其他已登录同一 tailnet 的设备上打开下面的地址。",
       conflict: "首选 HTTPS 端口已被其他路由占用。请选择一个空闲端口继续。",
       error:
         "远程访问需要处理。若 tailnet 未开启 Serve，请在 Synergy 打开的管理页允许 Serve，然后点「重试启用」。",
@@ -409,7 +412,8 @@ export const copy = {
         "点击「启用远程访问」发布私有 HTTPS 地址。",
       ],
       active: [
-        "从同一 tailnet 的其他设备复制或打开这个地址。",
+        "在要访问的这台设备上安装 Tailscale，并登录同一账号（或加入同一 tailnet）。",
+        "确认该设备已连接后，用浏览器打开上面的地址。",
         "不再需要时，可在这里停用远程访问。",
       ],
       conflict: [

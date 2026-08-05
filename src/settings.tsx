@@ -64,6 +64,8 @@ const STYLES = `
 .sr-step[data-state=pending] .sr-step-title,.sr-step[data-state=pending] .sr-step-copy{color:var(--text-weaker,var(--text-weak))}
 .sr-step-copy{margin:2px 0 0;color:var(--text-weak);font-size:12px;line-height:1.45}
 .sr-callout{padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--border-base) 48%,transparent);background:var(--surface-raised-base,var(--surface-inset-base))}
+.sr-callout[data-tone=success]{background:color-mix(in srgb,var(--surface-success-weak,var(--surface-inset-base)) 85%,transparent);border-color:color-mix(in srgb,var(--surface-success-strong,var(--border-base)) 38%,transparent)}
+.sr-callout[data-tone=success] strong{color:var(--surface-success-strong,var(--text-strong))}
 .sr-callout strong{display:block;margin-bottom:8px;color:var(--text-strong);font-size:13px}
 .sr-callout ul{margin:0;padding-left:18px;color:var(--text-weak);font-size:12.5px;line-height:1.55}
 .sr-callout li+li{margin-top:4px}
@@ -302,11 +304,16 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
             </label>
           </Show>
 
-          <div class="sr-callout">
+          <div
+            class="sr-callout"
+            data-tone={phase() === "active" ? "success" : undefined}
+          >
             <strong>
               {phase() === "installing" || phase() === "not_installed"
                 ? text.nowDoTitle
-                : text.overview}
+                : phase() === "active"
+                  ? text.activeAccessTitle
+                  : text.overview}
             </strong>
             <ul>
               <For each={[...nowDo()]}>{(item) => <li>{item}</li>}</For>

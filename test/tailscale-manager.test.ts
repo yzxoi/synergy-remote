@@ -258,4 +258,59 @@ describe("TailscaleManager", () => {
       installAttempted: true,
     });
   });
+
+  test("adopts an existing Serve route that already points at Synergy", async () => {
+    const item = fixture({
+      routes: {
+        Web: {
+          "host:443": {
+            Handlers: { "/": { Proxy: "http://127.0.0.1:4096" } },
+          },
+        },
+      },
+    });
+    const status = await item.manager.enable();
+    expect(status.phase).toBe("active");
+    expect(item.state()).toMatchObject({
+      enabled: true,
+      httpsPort: 443,
+    });
+    expect(
+      item.commands.some(
+        (args) =>
+          args[0] === "serve" &&
+          args.includes("--bg") &&
+          args.includes("--https=443"),
+      ),
+    ).toBe(false);
+  });
+
+  test("surfaces a clear error when Serve is disabled on the tailnet", async () => {
+    let opened: string | undefined;
+    const item = fixture();
+    item.manager["dependencies"].adapter.openUrl = (url) => {
+      opened = url;
+      return true;
+    };
+    const original = item.manager["dependencies"].adapter.run.bind(
+      item.manager["dependencies"].adapter,
+    );
+    item.manager["dependencies"].adapter.run = async (args) => {
+      if (args[0] === "serve" && args.includes("--bg")) {
+        return {
+          exitCode: 124,
+          stdout:
+            "Serve is not enabled on your tailnet.\nTo enable, visit:\n\n         https://login.tailscale.com/f/serve?node=abc\n",
+          stderr: "Tailscale command timed out.",
+        };
+      }
+      return original(args);
+    };
+    await expect(item.manager.enable()).resolves.toMatchObject({
+      phase: "error",
+      errorCode: "SERVE_DISABLED_ON_TAILNET",
+      message: expect.stringContaining("login.tailscale.com/f/serve"),
+    });
+    expect(opened).toBe("https://login.tailscale.com/f/serve?node=abc");
+  });
 });

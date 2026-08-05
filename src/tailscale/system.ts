@@ -14,6 +14,7 @@ export interface TailscaleAdapter {
   run(args: string[]): Promise<CommandResult>;
   install(): Promise<InstallResult>;
   login(): Promise<{ launched: boolean }>;
+  openUrl?(url: string): boolean;
 }
 
 export interface SystemActions {
@@ -43,12 +44,22 @@ async function defaultRun(
   args: string[],
   options: { env?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<CommandResult> {
+  const timeoutMs = options.timeoutMs ?? 15_000;
   const child = Bun.spawn([command, ...args], {
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...options.env },
+    // Detach false so kill reaches the actual CLI process tree where possible.
   });
-  const timeout = setTimeout(() => child.kill(), options.timeoutMs ?? 15_000);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      child.kill();
+    } catch {
+      // ignore
+    }
+  }, timeoutMs);
   try {
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
@@ -56,18 +67,23 @@ async function defaultRun(
       child.exited,
     ]);
     return {
-      exitCode,
+      // Keep partial CLI guidance even when the process hangs after printing.
+      exitCode: timedOut ? 124 : exitCode,
       stdout: stdout.slice(0, 1_000_000),
-      stderr: stderr.slice(0, 100_000),
+      stderr: (
+        timedOut
+          ? [stderr, "Tailscale command timed out."].filter(Boolean).join("\n")
+          : stderr
+      ).slice(0, 100_000),
     };
   } catch (error) {
     return {
-      exitCode: 1,
+      exitCode: timedOut ? 124 : 1,
       stdout: "",
       stderr: error instanceof Error ? error.message : String(error),
     };
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
   }
 }
 
@@ -141,14 +157,17 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
   }
 
   async executable() {
-    const candidates = pathCandidates("tailscale", this.platform);
-    if (this.platform === "darwin") {
-      candidates.push(
-        "/usr/local/bin/tailscale",
-        "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
-        "/Applications/Tailscale.app/Contents/MacOS/Tailscale IPN",
-      );
-    }
+    // Prefer the real macOS app binary over /usr/local/bin/tailscale, which is
+    // often only a shell wrapper and makes hangs harder to cancel cleanly.
+    const candidates =
+      this.platform === "darwin"
+        ? [
+            "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+            "/Applications/Tailscale.app/Contents/MacOS/Tailscale IPN",
+            ...pathCandidates("tailscale", this.platform),
+            "/usr/local/bin/tailscale",
+          ]
+        : pathCandidates("tailscale", this.platform);
     if (this.platform === "win32") {
       for (const root of [process.env.ProgramFiles, process.env.LOCALAPPDATA]) {
         if (root)
@@ -167,7 +186,8 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
         stderr: "Tailscale CLI is not installed",
       };
     return this.actions.run(executable, args, {
-      timeoutMs: 20_000,
+      // Serve enable can print admin guidance then hang; fail fast with output.
+      timeoutMs: args[0] === "serve" && args[1] !== "status" ? 12_000 : 20_000,
       ...(this.platform === "darwin" ? { env: { TAILSCALE_BE_CLI: "1" } } : {}),
     });
   }
@@ -176,7 +196,11 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
     if (this.platform === "darwin") {
       // Homebrew may only download the pkg. Prefer opening a staged installer
       // when the app is still missing, including Retry from the settings panel.
-      if (!(await this.executable())) {
+      const appBinary = await firstExisting(this.actions, [
+        "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+        "/Applications/Tailscale.app/Contents/MacOS/Tailscale IPN",
+      ]);
+      if (!appBinary) {
         const pkg = await this.findMacInstallerPackage();
         if (pkg) {
           return {
@@ -266,6 +290,13 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
     return { launched: false };
   }
 
+  openUrl(url: string) {
+    if (this.platform === "darwin") return this.actions.launch("open", [url]);
+    if (this.platform === "win32")
+      return this.actions.launch("cmd.exe", ["/c", "start", "", url]);
+    return this.actions.launch("xdg-open", [url]);
+  }
+
   private async findMacInstallerPackage() {
     const roots = [
       "/opt/homebrew/Caskroom/tailscale-app",
@@ -282,13 +313,6 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
     }
     packages.sort((left, right) => right.localeCompare(left));
     return packages[0];
-  }
-
-  private openUrl(url: string) {
-    if (this.platform === "darwin") return this.actions.launch("open", [url]);
-    if (this.platform === "win32")
-      return this.actions.launch("cmd.exe", ["/c", "start", "", url]);
-    return this.actions.launch("xdg-open", [url]);
   }
 
   private async supportedLinux() {

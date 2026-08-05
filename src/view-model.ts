@@ -23,12 +23,29 @@ export function needsCustomPort(status: RemoteAccessStatus | undefined) {
 }
 
 export function canEnable(status: RemoteAccessStatus | undefined) {
+  if (!status) return false;
+  if (status.phase === "active") return false;
+  if (status.phase === "error" && status.errorCode === "SERVE_DISABLED_ON_TAILNET") {
+    return status.installed && status.loggedIn && status.online;
+  }
   return Boolean(
-    status?.installed &&
+    status.installed &&
       status.loggedIn &&
       status.online &&
-      status.phase !== "active",
+      (status.phase === "ready" || status.phase === "conflict"),
   );
+}
+
+export function serveAdminUrl(status: RemoteAccessStatus | undefined) {
+  const message = status?.message ?? "";
+  return (
+    message.match(/https:\/\/login\.tailscale\.com\/f\/serve\?[^\s]+/i)?.[0] ??
+    undefined
+  );
+}
+
+export function isServeDisabledError(status: RemoteAccessStatus | undefined) {
+  return status?.errorCode === "SERVE_DISABLED_ON_TAILNET";
 }
 
 export function validCustomPort(value: string) {
@@ -153,6 +170,8 @@ export const copy = {
     install: "Install Tailscale",
     login: "Open Tailscale / Sign in",
     enable: "Enable Remote Access",
+    retryEnable: "Retry enable",
+    openServeAdmin: "Open Serve admin page",
     disable: "Disable",
     copy: "Copy address",
     open: "Open address",
@@ -214,7 +233,8 @@ export const copy = {
         "Remote access is active. Use the address below from another device in the same tailnet.",
       conflict:
         "The preferred HTTPS ports are already used by another route. Choose a free port to continue.",
-      error: "Remote access needs attention. Check the message below and retry.",
+      error:
+        "Remote access needs attention. If Serve is disabled on your tailnet, open the admin page that Synergy launched, allow Serve, then retry enable.",
     },
     nowDo: {
       not_installed: [
@@ -250,8 +270,9 @@ export const copy = {
         "Enable remote access again after selecting the port.",
       ],
       error: [
-        "Read the error message below.",
-        "Fix the underlying issue, then refresh status or retry the action.",
+        "If a Tailscale admin page opened, allow Serve for this device there.",
+        "Come back here and click Retry enable.",
+        "If nothing opened, use Open Serve admin page below.",
       ],
     },
     afterInstall: [
@@ -297,6 +318,8 @@ export const copy = {
     install: "安装 Tailscale",
     login: "打开 Tailscale / 登录",
     enable: "启用远程访问",
+    retryEnable: "重试启用",
+    openServeAdmin: "打开 Serve 管理页",
     disable: "停用",
     copy: "复制地址",
     open: "打开地址",
@@ -355,7 +378,8 @@ export const copy = {
       ready: "Tailscale 已就绪。启用远程访问即可发布私有 HTTPS 地址。",
       active: "远程访问已启用。请从同一 tailnet 中的其他设备打开下面的地址。",
       conflict: "首选 HTTPS 端口已被其他路由占用。请选择一个空闲端口继续。",
-      error: "远程访问需要处理。请查看下面的错误信息并重试。",
+      error:
+        "远程访问需要处理。若 tailnet 未开启 Serve，请在 Synergy 打开的管理页允许 Serve，然后点「重试启用」。",
     },
     nowDo: {
       not_installed: [
@@ -391,8 +415,9 @@ export const copy = {
         "选好端口后再次启用远程访问。",
       ],
       error: [
-        "先查看下方错误信息。",
-        "处理问题后刷新状态，或重试对应操作。",
+        "如果弹出了 Tailscale 管理页，请在那里允许此设备使用 Serve。",
+        "回到这里点击「重试启用」。",
+        "如果没有弹出页面，请点「打开 Serve 管理页」。",
       ],
     },
     afterInstall: [

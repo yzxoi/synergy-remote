@@ -13,8 +13,10 @@ import {
   copy,
   installAction,
   installModeLabel,
+  isServeDisabledError,
   localeFromLanguage,
   needsCustomPort,
+  serveAdminUrl,
   setupSteps,
   validCustomPort,
   type SetupStepState,
@@ -393,8 +395,23 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
                   );
                 }}
               >
-                {text.enable}
+                {isServeDisabledError(status())
+                  ? text.retryEnable
+                  : text.enable}
               </PrimaryButton>
+            </Show>
+            <Show
+              when={isServeDisabledError(status()) && serveAdminUrl(status())}
+            >
+              <SecondaryButton
+                disabled={Boolean(busy())}
+                onClick={() => {
+                  const url = serveAdminUrl(status());
+                  if (url) window.open(url, "_blank", "noreferrer");
+                }}
+              >
+                {text.openServeAdmin}
+              </SecondaryButton>
             </Show>
             <Show when={status()?.phase === "active" || status()?.desiredEnabled}>
               <SecondaryButton

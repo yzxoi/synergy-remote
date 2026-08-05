@@ -101,7 +101,7 @@ export class TailscaleManager {
     let selected: number | undefined;
     for (const port of candidates) {
       const route = snapshot.routes.get(port);
-      if (!route || ownsRoute(route, state)) {
+      if (!route || ownsRoute(route, state) || routeMatchesTarget(route, target)) {
         selected = port;
         break;
       }
@@ -116,21 +116,41 @@ export class TailscaleManager {
       );
     }
 
-    const result = await this.dependencies.adapter.run([
-      "serve",
-      "--bg",
-      `--https=${selected}`,
-      "--yes",
-      target,
-    ]);
-    if (result.exitCode !== 0) {
-      return errorStatus(
-        "SERVE_ENABLE_FAILED",
-        conciseError(result),
-        snapshot,
-        state.enabled,
-        state.installAttempted,
-      );
+    const existing = snapshot.routes.get(selected);
+    const alreadyServing =
+      existing &&
+      !existing.funnel &&
+      routeMatchesTarget(existing, target);
+
+    if (!alreadyServing) {
+      const result = await this.dependencies.adapter.run([
+        "serve",
+        "--bg",
+        `--https=${selected}`,
+        "--yes",
+        target,
+      ]);
+      if (result.exitCode !== 0) {
+        const serveDisabled = serveDisabledError(result);
+        if (serveDisabled) {
+          if (serveDisabled.url)
+            this.dependencies.adapter.openUrl?.(serveDisabled.url);
+          return errorStatus(
+            "SERVE_DISABLED_ON_TAILNET",
+            serveDisabled.message,
+            snapshot,
+            state.enabled,
+            state.installAttempted,
+          );
+        }
+        return errorStatus(
+          "SERVE_ENABLE_FAILED",
+          conciseError(result),
+          snapshot,
+          state.enabled,
+          state.installAttempted,
+        );
+      }
     }
 
     if (state.httpsPort !== undefined && state.httpsPort !== selected) {
@@ -336,10 +356,19 @@ export class TailscaleManager {
 function ownsRoute(route: ServeRoute, state: RemoteAccessState) {
   return Boolean(
     !route.funnel &&
-    route.target &&
-    state.lastTargetFingerprint &&
-    targetFingerprint(route.target) === state.lastTargetFingerprint,
+      route.target &&
+      state.lastTargetFingerprint &&
+      targetFingerprint(route.target) === state.lastTargetFingerprint,
   );
+}
+
+function routeMatchesTarget(route: ServeRoute, target: string) {
+  if (!route.target || route.funnel) return false;
+  try {
+    return targetFingerprint(route.target) === targetFingerprint(target);
+  } catch {
+    return false;
+  }
 }
 
 function normalizedTarget(value: string) {
@@ -394,11 +423,49 @@ function conciseError(result: {
   stdout: string;
   exitCode: number;
 }) {
+  const text = `${result.stdout}\n${result.stderr}`.trim();
+  if (/Serve is not enabled on your tailnet/i.test(text)) {
+    return (
+      serveDisabledError(result)?.message ||
+      "Serve is not enabled on your tailnet."
+    );
+  }
+  if (result.exitCode === 124) {
+    return (
+      firstMeaningfulLine(text) ||
+      "Tailscale command timed out. Check Tailscale Serve permissions and try again."
+    );
+  }
   return (
-    firstLine(result.stderr) ||
-    firstLine(result.stdout) ||
+    firstMeaningfulLine(result.stderr) ||
+    firstMeaningfulLine(result.stdout) ||
     `Tailscale exited with code ${result.exitCode}`
   );
+}
+
+function firstMeaningfulLine(value: string) {
+  for (const line of value.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
+
+function serveDisabledError(result: {
+  stderr: string;
+  stdout: string;
+}): { message: string; url?: string } | undefined {
+  const text = `${result.stdout}\n${result.stderr}`;
+  if (!/Serve is not enabled on your tailnet/i.test(text)) return;
+  const url = text.match(
+    /https:\/\/login\.tailscale\.com\/f\/serve\?[^\s]+/i,
+  )?.[0];
+  return {
+    url,
+    message: url
+      ? `Serve is not enabled on your tailnet. Open ${url} to enable it for this device, then try again.`
+      : "Serve is not enabled on your tailnet. Enable Serve in the Tailscale admin console for this device, then try again.",
+  };
 }
 
 function errorStatus(

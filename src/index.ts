@@ -155,6 +155,10 @@ export const plugin = definePlugin({
         const typed = await prepare(context);
         const status = await remoteRuntime.manager().enable(input);
         await sync(typed);
+        if (status.phase === "active" || status.desiredEnabled) {
+          const endpoint = await typed.runtimeEndpoint!.get();
+          void remoteRuntime.start(endpoint).catch(() => undefined);
+        }
         return status;
       },
     }),

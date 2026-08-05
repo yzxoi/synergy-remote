@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Remote Access · Installing mockup</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f4f5;
+        --panel: #ffffff;
+        --panel-soft: #fafafa;
+        --ink: #18181b;
+        --ink-soft: #52525b;
+        --ink-faint: #71717a;
+        --line: #e4e4e7;
+        --line-soft: #ececef;
+        --accent: #2563eb;
+        --accent-soft: #eff6ff;
+        --accent-ink: #1d4ed8;
+        --warn: #b45309;
+        --warn-soft: #fff7ed;
+        --warn-line: #fdba74;
+        --ok: #15803d;
+        --ok-soft: #f0fdf4;
+        --shadow: 0 24px 80px rgba(24, 24, 27, 0.16);
+        --radius: 18px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--sans);
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%),
+          linear-gradient(180deg, #ececef 0%, var(--bg) 40%, #e7e7ea 100%);
+        color: var(--ink);
+      }
+
+      .stage {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 40px 20px 56px;
+      }
+
+      .shell {
+        width: min(980px, 100%);
+        display: grid;
+        grid-template-columns: 228px 1fr;
+        min-height: 680px;
+        background: var(--panel);
+        border: 1px solid rgba(24, 24, 27, 0.08);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .nav {
+        background: linear-gradient(180deg, #fbfbfc 0%, #f5f5f6 100%);
+        border-right: 1px solid var(--line);
+        padding: 22px 14px;
+      }
+
+      .nav-title {
+        padding: 0 10px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .nav-item.active {
+        background: #fff;
+        color: var(--ink);
+        box-shadow: inset 0 0 0 1px var(--line), 0 1px 2px rgba(24, 24, 27, 0.04);
+        font-weight: 600;
+      }
+
+      .nav-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: currentColor;
+        opacity: 0.35;
+      }
+
+      .nav-item.active .nav-dot {
+        background: var(--accent);
+        opacity: 1;
+      }
+
+      .content {
+        padding: 28px 32px 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-ink);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+      }
+
+      .lede {
+        margin: 8px 0 0;
+        max-width: 48ch;
+        color: var(--ink-soft);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--warn-soft);
+        color: var(--warn);
+        border: 1px solid var(--warn-line);
+        font-size: 12px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: currentColor;
+        box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.45);
+        animation: pulse 1.8s ease-out infinite;
+      }
+
+      @keyframes pulse {
+        70% {
+          box-shadow: 0 0 0 10px rgba(180, 83, 9, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(180, 83, 9, 0);
+        }
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.35fr 0.9fr;
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 18px 18px 16px;
+      }
+
+      .card.solid {
+        background: #fff;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: -0.01em;
+      }
+
+      .card p {
+        margin: 6px 0 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .progress {
+        margin-top: 18px;
+        display: grid;
+        gap: 0;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 12px;
+        position: relative;
+        padding-bottom: 16px;
+      }
+
+      .step:last-child {
+        padding-bottom: 0;
+      }
+
+      .step::before {
+        content: "";
+        position: absolute;
+        left: 13px;
+        top: 24px;
+        bottom: 0;
+        width: 1px;
+        background: var(--line);
+      }
+
+      .step:last-child::before {
+        display: none;
+      }
+
+      .marker {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink-faint);
+        z-index: 1;
+      }
+
+      .step.done .marker {
+        background: var(--ok-soft);
+        border-color: #86efac;
+        color: var(--ok);
+      }
+
+      .step.current .marker {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .step-title {
+        font-size: 13px;
+        font-weight: 650;
+        color: var(--ink);
+      }
+
+      .step.pending .step-title,
+      .step.pending .step-copy {
+        color: var(--ink-faint);
+      }
+
+      .step-copy {
+        margin-top: 2px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--ink-soft);
+      }
+
+      .callout {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        display: grid;
+        gap: 8px;
+      }
+
+      .callout strong {
+        font-size: 13px;
+      }
+
+      .callout ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-soft);
+        font-size: 12.5px;
+        line-height: 1.55;
+      }
+
+      .meta {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid var(--line-soft);
+        font-size: 12.5px;
+      }
+
+      .meta-row span:first-child {
+        color: var(--ink-faint);
+      }
+
+      .meta-row span:last-child {
+        color: var(--ink);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 12px;
+        min-height: 40px;
+        padding: 0 14px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .btn-primary[disabled] {
+        opacity: 0.72;
+        cursor: default;
+      }
+
+      .btn-secondary {
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--ink-soft);
+        border: 1px solid transparent;
+      }
+
+      .safety {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fff 0%, #fbfbfc 100%);
+        border: 1px solid var(--line);
+      }
+
+      .shield {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-size: 16px;
+      }
+
+      .safety h3 {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      .safety p {
+        margin: 4px 0 0;
+        color: var(--ink-soft);
+        font-size: 12.5px;
+        line-height: 1.5;
+      }
+
+      .caption {
+        margin-top: 8px;
+        text-align: center;
+        color: var(--ink-faint);
+        font-size: 12px;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+
+      .tab {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .tab.active {
+        background: #18181b;
+        border-color: #18181b;
+        color: #fff;
+      }
+
+      @media (max-width: 860px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        .nav {
+          display: none;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .content {
+          padding: 22px 18px 24px;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #09090b;
+          --panel: #111113;
+          --panel-soft: #161618;
+          --ink: #fafafa;
+          --ink-soft: #a1a1aa;
+          --ink-faint: #71717a;
+          --line: #27272a;
+          --line-soft: #1f1f23;
+          --accent: #3b82f6;
+          --accent-soft: rgba(59, 130, 246, 0.12);
+          --accent-ink: #93c5fd;
+          --warn: #fdba74;
+          --warn-soft: rgba(251, 146, 60, 0.12);
+          --warn-line: rgba(251, 146, 60, 0.28);
+          --ok: #86efac;
+          --ok-soft: rgba(34, 197, 94, 0.12);
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        }
+
+        body {
+          background:
+            radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 28%),
+            linear-gradient(180deg, #050507 0%, var(--bg) 45%, #0b0b0e 100%);
+        }
+
+        .nav {
+          background: linear-gradient(180deg, #121214 0%, #0f0f11 100%);
+        }
+
+        .nav-item.active,
+        .callout,
+        .meta-row,
+        .btn-secondary,
+        .marker {
+          background: #1a1a1d;
+        }
+
+        .btn-ghost {
+          color: var(--ink-soft);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div>
+        <div class="tabs" aria-hidden="true">
+          <span class="tab active">Installing preview</span>
+          <span class="tab">Not a live settings page</span>
+        </div>
+
+        <div class="shell" role="dialog" aria-label="远程访问设置预览">
+          <aside class="nav">
+            <div class="nav-title">Plugins</div>
+            <div class="nav-item"><span class="nav-dot"></span>Frontend Kit</div>
+            <div class="nav-item"><span class="nav-dot"></span>VibeLingo</div>
+            <div class="nav-item active"><span class="nav-dot"></span>Remote Access</div>
+          </aside>
+
+          <main class="content">
+            <header class="header">
+              <div>
+                <p class="eyebrow">Secure tailnet access</p>
+                <h1>远程访问</h1>
+                <p class="lede">
+                  用 Tailscale Serve，从同一 tailnet 的其他设备安全访问这台
+                  Synergy。先完成安装与登录，再启用远程访问。
+                </p>
+              </div>
+              <div class="status-pill" aria-live="polite">
+                <span class="pulse" aria-hidden="true"></span>
+                正在安装 Tailscale
+              </div>
+            </header>
+
+            <div class="grid">
+              <section class="card solid">
+                <h2>安装进度</h2>
+                <p>安装器在 Synergy 外运行。完成后这里会自动切到登录。</p>
+
+                <div class="progress" aria-label="安装步骤">
+                  <div class="step done">
+                    <div class="marker">✓</div>
+                    <div>
+                      <div class="step-title">已启动安装</div>
+                      <div class="step-copy">Synergy 已打开系统安装流程。</div>
+                    </div>
+                  </div>
+                  <div class="step current">
+                    <div class="marker">2</div>
+                    <div>
+                      <div class="step-title">完成系统安装</div>
+                      <div class="step-copy">
+                        在终端 / 安装窗口里确认权限，必要时输入 macOS 密码。
+                      </div>
+                    </div>
+                  </div>
+                  <div class="step pending">
+                    <div class="marker">3</div>
+                    <div>
+                      <div class="step-title">登录 Tailscale</div>
+                      <div class="step-copy">安装完成后打开客户端并加入 tailnet。</div>
+                    </div>
+                  </div>
+                  <div class="step pending">
+                    <div class="marker">4</div>
+                    <div>
+                      <div class="step-title">启用远程访问</div>
+                      <div class="step-copy">创建私有 HTTPS 地址，不启用 Funnel。</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="callout">
+                  <strong>现在请做什么</strong>
+                  <ul>
+                    <li>检查是否有 Terminal 或安装器窗口在前台/后台。</li>
+                    <li>如果卡在密码提示，输入本机管理员密码继续。</li>
+                    <li>如果什么都没打开，点「重新打开安装」。</li>
+                  </ul>
+                </div>
+
+                <div class="actions">
+                  <button class="btn-primary" disabled type="button">
+                    正在等待 Tailscale…
+                  </button>
+                  <button class="btn-secondary" type="button">重新打开安装</button>
+                  <button class="btn-ghost" type="button">刷新状态</button>
+                </div>
+              </section>
+
+              <aside class="card">
+                <h2>安装详情</h2>
+                <p>安装在系统侧进行。完成后，这里会自动进入登录引导。</p>
+
+                <div class="meta">
+                  <div class="meta-row">
+                    <span>当前阶段</span>
+                    <span>正在安装</span>
+                  </div>
+                  <div class="meta-row">
+                    <span>安装方式</span>
+                    <span>Homebrew 自动安装</span>
+                  </div>
+                  <div class="meta-row">
+                    <span>Tailscale 客户端</span>
+                    <span>尚未检测到</span>
+                  </div>
+                  <div class="meta-row">
+                    <span>状态刷新</span>
+                    <span>约每 4 秒</span>
+                  </div>
+                </div>
+
+                <div class="callout" style="margin-top: 16px">
+                  <strong>装好之后</strong>
+                  <ul>
+                    <li>打开 Tailscale 并登录你的账号。</li>
+                    <li>确认这台电脑已加入正确的 tailnet。</li>
+                    <li>回到这里启用远程访问，获取私有 HTTPS 地址。</li>
+                  </ul>
+                </div>
+              </aside>
+            </div>
+
+            <section class="safety">
+              <div class="shield" aria-hidden="true">⌀</div>
+              <div>
+                <h3>启用前的安全边界</h3>
+                <p>
+                  安装本身不会暴露实例。启用后，地址会把整个 Synergy 实例开放给
+                  tailnet ACL 允许的用户。Synergy Remote 永远不会启用 Funnel。
+                </p>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <p class="caption">
+          Preview only · installing state · intended visual target before implementation
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

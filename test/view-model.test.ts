@@ -6,6 +6,7 @@ import {
   localeFromLanguage,
   needsCustomPort,
   phaseTone,
+  setupSteps,
   validCustomPort,
 } from "../src/view-model";
 import type { RemoteAccessStatus } from "../src/types";
@@ -53,7 +54,6 @@ describe("remote settings view model", () => {
     expect(validCustomPort("65536")).toBe(false);
     expect(validCustomPort("not-a-port")).toBe(false);
   });
-});
 
   test("offers install, waiting, or nothing based on install state", () => {
     expect(
@@ -75,6 +75,26 @@ describe("remote settings view model", () => {
     expect(installAction(ready)).toBe("none");
   });
 
+  test("marks the install step current while Tailscale is installing", () => {
+    const steps = setupSteps(
+      {
+        ...ready,
+        phase: "installing",
+        installed: false,
+        installAttempted: true,
+        installMode: "automatic",
+      },
+      "zh-CN",
+    );
+    expect(steps.map((step) => step.state)).toEqual([
+      "done",
+      "current",
+      "pending",
+      "pending",
+    ]);
+    expect(steps[1]?.body).toContain("macOS");
+  });
+
   test("every phase has a tone and descriptions in both locales", () => {
     const phases = [
       "not_installed",
@@ -90,6 +110,10 @@ describe("remote settings view model", () => {
       expect(phaseTone[phase]).toBeTruthy();
       expect(copy.en.phaseDescriptions[phase]).toBeTruthy();
       expect(copy["zh-CN"].phaseDescriptions[phase]).toBeTruthy();
-      expect(copy.en.installingSteps.generic).toBeTruthy();
+      expect(copy.en.nowDo[phase].length).toBeGreaterThan(0);
+      expect(copy["zh-CN"].nowDo[phase].length).toBeGreaterThan(0);
     }
+    expect(copy.en.setup.installBodyGeneric).toBeTruthy();
+    expect(copy["zh-CN"].retryInstall).toBe("重新打开安装");
   });
+});

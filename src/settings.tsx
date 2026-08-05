@@ -23,7 +23,7 @@ import type { RemoteAccessStatus, RemoteSettingsComponentProps } from "./types";
 import { createActionRunner, createStatusPolling } from "./controller";
 
 const STYLES = `
-.sr-settings{box-sizing:border-box;width:min(100%,920px);color:var(--text-base);font-family:var(--font-family-sans,system-ui,sans-serif);font-size:var(--type-ui-body-size,.875rem);line-height:var(--type-ui-body-line-height,1.5)}
+.sr-settings{box-sizing:border-box;width:min(100%,920px);padding:28px 32px 36px;color:var(--text-base);font-family:var(--font-family-sans,system-ui,sans-serif);font-size:var(--type-ui-body-size,.875rem);line-height:var(--type-ui-body-line-height,1.5)}
 .sr-settings *,.sr-settings *::before,.sr-settings *::after{box-sizing:border-box}
 .sr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid color-mix(in srgb,var(--border-base) 42%,transparent);margin-bottom:18px}
 .sr-eyebrow{margin:0 0 8px;color:var(--text-interactive-base,var(--text-strong));font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
@@ -80,8 +80,9 @@ const STYLES = `
 .sr-safety p{margin:4px 0 0;color:var(--text-weak);font-size:12.5px;line-height:1.5}
 .sr-link{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--border-base) 70%,transparent);color:var(--text-strong);text-decoration:none;font-size:13px;font-weight:650}
 @media (max-width:860px){
+  .sr-settings{padding:22px 18px 28px}
   .sr-grid{grid-template-columns:minmax(0,1fr)}
-  .sr-header{flex-direction:column}
+  .sr-header{flex-direction:column;align-items:stretch}
 }
 `;
 

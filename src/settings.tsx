@@ -24,6 +24,12 @@ import { createActionRunner, createStatusPolling } from "./controller";
 
 const STYLES = `
 .sr-settings{box-sizing:border-box;width:min(100%,920px);padding:28px 32px 36px;color:var(--text-base);font-family:var(--font-family-sans,system-ui,sans-serif);font-size:var(--type-ui-body-size,.875rem);line-height:var(--type-ui-body-line-height,1.5)}
+.sr-loading{display:flex;flex-direction:column;gap:12px;padding:8px 0 4px;color:var(--text-weak)}
+.sr-loading-card{min-height:180px;border:1px solid color-mix(in srgb,var(--border-base) 48%,transparent);border-radius:18px;background:var(--surface-raised-base,var(--surface-inset-base));padding:18px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+.sr-loading-row{height:12px;border-radius:999px;background:color-mix(in srgb,var(--border-base) 45%,transparent);animation:sr-pulse 1.6s ease-out infinite}
+.sr-loading-row[data-w=lg]{width:72%}
+.sr-loading-row[data-w=md]{width:48%}
+.sr-loading-row[data-w=sm]{width:34%}
 .sr-settings *,.sr-settings *::before,.sr-settings *::after{box-sizing:border-box}
 .sr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid color-mix(in srgb,var(--border-base) 42%,transparent);margin-bottom:18px}
 .sr-eyebrow{margin:0 0 8px;color:var(--text-interactive-base,var(--text-strong));font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
@@ -139,7 +145,7 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
   const steps = createMemo(() => setupSteps(status(), locale));
   const nowDo = createMemo(() => {
     const current = phase();
-    if (!current) return text.nowDo.not_installed;
+    if (!current) return [] as readonly string[];
     return text.nowDo[current];
   });
   const detailRows = createMemo(() => {
@@ -162,14 +168,16 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
       [text.client, text.clientInstalled],
     ];
   });
-  const showSetup = createMemo(
-    () =>
-      !status() ||
-      phase() === "not_installed" ||
-      phase() === "installing" ||
-      phase() === "signed_out" ||
-      phase() === "offline",
-  );
+  const showSetup = createMemo(() => {
+    const current = phase();
+    return (
+      current === "not_installed" ||
+      current === "installing" ||
+      current === "signed_out" ||
+      current === "offline"
+    );
+  });
+  const loading = createMemo(() => !status());
   const tone = createMemo(() => {
     const current = phase();
     if (current === "active" || current === "ready") return "success";
@@ -212,18 +220,29 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
         </Show>
       </header>
 
-      <div class="sr-grid" data-single={showSetup() ? "false" : "true"}>
-        <section class="sr-card">
-          <div>
-            <h3 class="sr-card-title">
-              {showSetup() ? text.installProgress : text.access}
-            </h3>
-            <Show when={status()}>
+      <Show
+        when={!loading()}
+        fallback={
+          <div class="sr-loading" aria-busy="true" aria-live="polite">
+            <div class="sr-loading-card">
+              <div class="sr-loading-row" data-w="lg" />
+              <div class="sr-loading-row" data-w="md" />
+              <div class="sr-loading-row" data-w="sm" />
+              <p style="margin:8px 0 0;font-size:13px">{text.loadingStatus}</p>
+            </div>
+          </div>
+        }
+      >
+        <div class="sr-grid" data-single={showSetup() ? "false" : "true"}>
+          <section class="sr-card">
+            <div>
+              <h3 class="sr-card-title">
+                {showSetup() ? text.installProgress : text.access}
+              </h3>
               <p class="sr-card-copy">
                 {text.phaseDescriptions[status()!.phase]}
               </p>
-            </Show>
-          </div>
+            </div>
 
           <Show when={showSetup()}>
             <ol class="sr-steps" aria-label={text.installProgress}>
@@ -442,7 +461,8 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
             </div>
           </aside>
         </Show>
-      </div>
+        </div>
+      </Show>
 
       <aside class="sr-safety">
         <div class="sr-shield" aria-hidden="true">

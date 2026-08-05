@@ -158,6 +158,7 @@ export const copy = {
     open: "Open address",
     customPort: "Custom HTTPS port",
     refreshStatus: "Refresh status",
+    loadingStatus: "Checking Tailscale status…",
     waitingForTailscale: "Waiting for Tailscale…",
     retryInstall: "Reopen installer",
     installAlreadyStarted:
@@ -301,6 +302,7 @@ export const copy = {
     open: "打开地址",
     customPort: "自定义 HTTPS 端口",
     refreshStatus: "刷新状态",
+    loadingStatus: "正在检查 Tailscale 状态…",
     waitingForTailscale: "正在等待 Tailscale…",
     retryInstall: "重新打开安装",
     installAlreadyStarted:

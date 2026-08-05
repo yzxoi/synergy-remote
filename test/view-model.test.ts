@@ -114,6 +114,8 @@ describe("remote settings view model", () => {
       expect(copy["zh-CN"].nowDo[phase].length).toBeGreaterThan(0);
     }
     expect(copy.en.setup.installBodyGeneric).toBeTruthy();
+    expect(copy.en.loadingStatus).toBeTruthy();
+    expect(copy["zh-CN"].loadingStatus).toBeTruthy();
     expect(copy["zh-CN"].retryInstall).toBe("重新打开安装");
   });
 });

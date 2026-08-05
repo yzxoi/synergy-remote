@@ -19,6 +19,7 @@ export interface TailscaleAdapter {
 export interface SystemActions {
   exists(filepath: string): Promise<boolean>;
   read(filepath: string): Promise<string>;
+  list(directory: string): Promise<string[]>;
   run(
     command: string,
     args: string[],
@@ -96,6 +97,14 @@ const defaultActions: SystemActions = {
       () => false,
     ),
   read: (filepath) => fs.readFile(filepath, "utf8"),
+  list: async (directory) => {
+    try {
+      const entries = await fs.readdir(directory, { withFileTypes: true });
+      return entries.map((entry) => path.join(directory, entry.name));
+    } catch {
+      return [];
+    }
+  },
   run: defaultRun,
   launch: defaultLaunch,
 };
@@ -165,12 +174,28 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
 
   async install(): Promise<InstallResult> {
     if (this.platform === "darwin") {
+      // Homebrew may only download the pkg. Prefer opening a staged installer
+      // when the app is still missing, including Retry from the settings panel.
+      if (!(await this.executable())) {
+        const pkg = await this.findMacInstallerPackage();
+        if (pkg) {
+          return {
+            launched: this.actions.launch("open", [pkg]),
+            mode: "automatic",
+          };
+        }
+      }
       const brew = await firstExisting(
         this.actions,
         pathCandidates("brew", this.platform),
       );
       if (brew) {
-        const script = `${quoteForShell(brew)} install --cask tailscale-app`;
+        const script = [
+          `${quoteForShell(brew)} install --cask tailscale-app`,
+          // If brew already staged the pkg but the app is still missing, open it.
+          `pkg=$(ls -t /opt/homebrew/Caskroom/tailscale-app/*/*.pkg /usr/local/Caskroom/tailscale-app/*/*.pkg 2>/dev/null | head -n 1)`,
+          `if [ -n "$pkg" ] && [ ! -d "/Applications/Tailscale.app" ]; then open "$pkg"; fi`,
+        ].join("; ");
         return {
           launched: this.actions.launch("osascript", [
             "-e",
@@ -239,6 +264,24 @@ export class SystemTailscaleAdapter implements TailscaleAdapter {
       };
     }
     return { launched: false };
+  }
+
+  private async findMacInstallerPackage() {
+    const roots = [
+      "/opt/homebrew/Caskroom/tailscale-app",
+      "/usr/local/Caskroom/tailscale-app",
+    ];
+    const packages: string[] = [];
+    for (const root of roots) {
+      if (!(await this.actions.exists(root))) continue;
+      for (const versionDir of await this.actions.list(root)) {
+        for (const entry of await this.actions.list(versionDir)) {
+          if (entry.toLowerCase().endsWith(".pkg")) packages.push(entry);
+        }
+      }
+    }
+    packages.sort((left, right) => right.localeCompare(left));
+    return packages[0];
   }
 
   private openUrl(url: string) {

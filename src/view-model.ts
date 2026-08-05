@@ -202,7 +202,7 @@ export const copy = {
       not_installed:
         "Tailscale is not installed yet. Synergy Remote needs the official Tailscale client to create a private HTTPS route.",
       installing:
-        "The installer is running outside Synergy. When it finishes, this page will move on to sign-in automatically.",
+        "The installer is running outside Synergy. If Homebrew already downloaded Tailscale, Synergy will open the macOS package installer for you.",
       signed_out:
         "Tailscale is installed but not signed in. Open Tailscale and sign in to your tailnet.",
       offline:
@@ -222,9 +222,9 @@ export const copy = {
         "Come back here after the install finishes.",
       ],
       installing: [
-        "Check whether a Terminal or installer window is open in the foreground or background.",
-        "If it asks for your password, enter your Mac admin password to continue.",
-        "If nothing opened, click Reopen installer.",
+        "If a macOS Installer window opened, continue through it and enter your admin password if asked.",
+        "If only Terminal opened, finish any brew prompts there, then wait for the package installer.",
+        "If nothing opened, click Reopen installer — Synergy will open the staged package when available.",
       ],
       signed_out: [
         "Open the Tailscale app.",
@@ -263,7 +263,7 @@ export const copy = {
       launchBody: "Synergy opens the supported system installer flow.",
       installTitle: "Finish system install",
       installBodyAutomatic:
-        "Confirm permissions in the terminal or installer window. Enter your macOS password if asked.",
+        "Finish the macOS package installer or Terminal prompts. Enter your admin password if asked.",
       installBodyGuided:
         "Download and install the official Tailscale client from the page that opened.",
       installBodyGeneric:
@@ -345,7 +345,7 @@ export const copy = {
       not_installed:
         "尚未安装 Tailscale。Synergy Remote 需要官方 Tailscale 客户端来创建私有的 HTTPS 访问地址。",
       installing:
-        "安装器在 Synergy 外运行。完成后，这里会自动进入登录引导。",
+        "安装器在 Synergy 外运行。如果 Homebrew 已经下载好安装包，Synergy 会直接打开 macOS 安装程序。",
       signed_out:
         "Tailscale 已安装但尚未登录。请打开 Tailscale 并登录到你的 tailnet。",
       offline:
@@ -362,9 +362,9 @@ export const copy = {
         "安装结束后回到这里继续。",
       ],
       installing: [
-        "检查是否有 Terminal 或安装器窗口在前台/后台。",
-        "如果卡在密码提示，输入本机管理员密码继续。",
-        "如果什么都没打开，点「重新打开安装」。",
+        "如果弹出了 macOS 安装窗口，请继续完成安装，必要时输入管理员密码。",
+        "如果只打开了 Terminal，先完成里面的 brew 提示，再等待安装包窗口。",
+        "如果什么都没打开，点「重新打开安装」——若安装包已下载，Synergy 会直接打开它。",
       ],
       signed_out: [
         "打开 Tailscale 应用。",
@@ -403,7 +403,7 @@ export const copy = {
       launchBody: "Synergy 已打开系统安装流程。",
       installTitle: "完成系统安装",
       installBodyAutomatic:
-        "在终端 / 安装窗口里确认权限，必要时输入 macOS 密码。",
+        "在终端或 macOS 安装窗口里完成安装，必要时输入管理员密码。",
       installBodyGuided: "在打开的页面下载并安装官方 Tailscale 客户端。",
       installBodyGeneric: "在打开的系统窗口中完成安装步骤。",
       loginTitle: "登录 Tailscale",

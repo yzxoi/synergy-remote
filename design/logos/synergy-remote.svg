@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Synergy Remote icon">
+  <rect width="64" height="64" rx="13" fill="#f8f9fc"/>
+  <!-- laptop screen, open toward the link -->
+  <path d="M11 19v16" fill="none" stroke="#19263a" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M11 19h17v4.6" fill="none" stroke="#19263a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- laptop base -->
+  <path d="M8.6 36.6h26.8" fill="none" stroke="#19263a" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M10.4 36.6c0 3.2.9 4.2 2.4 4.2h18.4c1.5 0 2.4-1 2.4-4.2" fill="none" stroke="#19263a" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M11.9 38.4h20.2" fill="none" stroke="#f8f9fc" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- laptop base right leg -->
+  <path d="M32.6 36.6v-3" fill="none" stroke="#19263a" stroke-width="2" stroke-linecap="round"/>
+  <!-- phone -->
+  <rect x="48.4" y="28.6" width="9.2" height="14" rx="2.7" fill="none" stroke="#19263a" stroke-width="1.7"/>
+  <circle cx="53" cy="38.8" r="1" fill="#19263a"/>
+  <!-- link arcs -->
+  <path d="M31.8 26.7 34.2 25.3" fill="none" stroke="#0bb8e5" stroke-width="2" stroke-linecap="round"/>
+  <path d="M37.2 24.6h3.6" fill="none" stroke="#0bb8e5" stroke-width="2" stroke-linecap="round"/>
+  <path d="M44.1 25.3l3.1 1.2" fill="none" stroke="#0bb8e5" stroke-width="2" stroke-linecap="round"/>
+  <!-- pulse dot -->
+  <circle cx="29.4" cy="30" r="1.95" fill="#0bb8e5"/>
+</svg>

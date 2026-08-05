@@ -271,21 +271,12 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
                 <div class="sr-actions">
                   <SecondaryButton
                     onClick={() => {
-                      void navigator.clipboard
-                        .writeText(url())
-                        .then(() =>
-                          props.context.host.notify(text.copied, {
-                            kind: "success",
-                          }),
-                        )
-                        .catch((cause) =>
-                          props.context.host.notify(
-                            cause instanceof Error
-                              ? cause.message
-                              : String(cause),
-                            { kind: "error" },
-                          ),
-                        );
+                      void copyText(url()).then((ok) =>
+                        props.context.host.notify(
+                          ok ? text.copied : text.copyFailed,
+                          { kind: ok ? "success" : "error" },
+                        ),
+                      );
                     }}
                   >
                     {text.copy}
@@ -556,3 +547,32 @@ function GhostButton(props: {
 }
 
 export default Settings;
+
+async function copyText(value: string): Promise<boolean> {
+  // Plugin surfaces run in an iframe where navigator.clipboard can be denied.
+  // Fall back to execCommand like the host clipboard helper does.
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}

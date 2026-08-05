@@ -195,6 +195,7 @@ export const copy = {
     confirmDisable:
       "Only the verified Tailscale Serve route created by Synergy Remote will be removed.",
     copied: "Remote address copied",
+    copyFailed: "Copy failed. Select the address and copy it manually.",
     cancelled: "Action cancelled",
     nowDoTitle: "What to do now",
     afterInstallTitle: "After install",
@@ -343,6 +344,7 @@ export const copy = {
     confirmDisable:
       "只会删除经核验确由 Synergy Remote 创建的 Tailscale Serve 规则。",
     copied: "远程地址已复制",
+    copyFailed: "复制失败。请手动选中地址后复制。",
     cancelled: "操作已取消",
     nowDoTitle: "现在请做什么",
     afterInstallTitle: "装好之后",

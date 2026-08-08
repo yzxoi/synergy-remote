@@ -90,6 +90,8 @@ export const plugin = definePlugin({
   name: "Synergy Remote",
   version: "0.1.0",
   description: "Secure remote access to Synergy via Tailscale",
+  author: "EricSanchez",
+  homepage: "https://github.com/EricSanchezok/synergy-remote",
   compatibility: { synergy: ">=1.1.27" },
   license: "MIT",
   keywords: ["synergy-plugin", "remote-access", "tailscale"],

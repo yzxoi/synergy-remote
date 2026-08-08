@@ -28,6 +28,9 @@ export class RemoteRuntimeController {
   private delayMs = 5_000;
   private endpoint: RuntimeEndpoint | undefined;
   private installMode: "automatic" | "guided" | undefined;
+  private endpointProvider:
+    | (() => Promise<RuntimeEndpoint | undefined>)
+    | undefined;
 
 
   constructor(
@@ -49,8 +52,22 @@ export class RemoteRuntimeController {
     this.installMode = mode;
   }
 
+  setEndpointProvider(provider: () => Promise<RuntimeEndpoint | undefined>) {
+    this.endpointProvider = provider;
+  }
+
   setEndpoint(endpoint: RuntimeEndpoint) {
     this.endpoint = endpoint;
+  }
+
+  private async refreshEndpoint() {
+    if (!this.endpointProvider) return;
+    try {
+      const fresh = await this.endpointProvider();
+      if (fresh) this.endpoint = fresh;
+    } catch {
+      // Keep the cached endpoint; the next cycle retries.
+    }
   }
 
   async start(endpoint: RuntimeEndpoint) {
@@ -71,6 +88,7 @@ export class RemoteRuntimeController {
     let delay = 2_000;
     const check = async () => {
       if (this.stopped) return;
+      await this.refreshEndpoint();
       const status = await this.manager().status();
       if (status.installed) {
         if (!status.loggedIn) await this.adapter.login();
@@ -90,8 +108,8 @@ export class RemoteRuntimeController {
   }
 
   private async tick(): Promise<RemoteAccessStatus> {
+    await this.refreshEndpoint();
     const status = await this.manager().reconcile();
-    if (this.stopped || !status.desiredEnabled) return status;
     if (status.phase === "active") {
       this.setTimer(
         () => void this.tick().catch(() => this.scheduleRetry()),

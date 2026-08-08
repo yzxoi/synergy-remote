@@ -59,6 +59,9 @@ async function prepare(context: PluginInvocationContext, endpoint = true) {
   if (endpoint) {
     if (!typed.runtimeEndpoint)
       throw new Error("Synergy Remote requires runtime.endpoint.read");
+    // Re-resolve the endpoint on every background cycle so a Synergy restart
+    // that moves the server port self-heals instead of serving a dead target.
+    remoteRuntime.setEndpointProvider(() => typed.runtimeEndpoint!.get());
     remoteRuntime.setEndpoint(await typed.runtimeEndpoint.get());
   }
   return typed;

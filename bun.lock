@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "synergy-remote",
+      "name": "synergy-remote-tailscale",
       "dependencies": {
         "@ericsanchezok/synergy-plugin": "^3.0.11",
         "solid-js": "^1.9.10",

@@ -10,7 +10,7 @@ import type { TailscaleAdapter } from "../src/tailscale/system";
 describe("RemoteRuntimeController", () => {
   test("starts retrying at five seconds and cancels the owned timer on stop", async () => {
     const directory = await fs.mkdtemp(
-      path.join(os.tmpdir(), "synergy-remote-runtime-"),
+      path.join(os.tmpdir(), "synergy-remote-tailscale-runtime-"),
     );
     const store = new RemoteStateStore(path.join(directory, "state.json"));
     await store.write({ enabled: true, installAttempted: true });
@@ -69,7 +69,7 @@ describe("RemoteRuntimeController", () => {
 describe("RemoteRuntimeController endpoint refresh", () => {
   test("re-resolves the endpoint on each tick and repoints Serve", async () => {
     const directory = await fs.mkdtemp(
-      path.join(os.tmpdir(), "synergy-remote-runtime-"),
+      path.join(os.tmpdir(), "synergy-remote-tailscale-runtime-"),
     );
     const store = new RemoteStateStore(path.join(directory, "state.json"));
     const oldTarget = "http://127.0.0.1:4096";

@@ -13,7 +13,7 @@ function statePath() {
     ".synergy",
     "data",
     "plugin",
-    "synergy-remote",
+    "synergy-remote-tailscale",
     "remote-access.json",
   );
 }

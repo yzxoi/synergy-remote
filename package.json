@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "synergy-remote",
+  "name": "synergy-remote-tailscale",
   "version": "0.1.0",
   "description": "Secure remote access to Synergy via Tailscale",
   "type": "module",

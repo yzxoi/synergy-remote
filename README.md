@@ -1,4 +1,4 @@
-# Synergy Remote
+# Synergy Remote Tailscale
 
 Secure remote access to a complete Synergy instance through [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve).
 
@@ -18,7 +18,7 @@ Synergy Remote does not create a public endpoint, never enables Tailscale Funnel
    ```bash
    bun install
    bun run build
-   synergy plugin add file:///absolute/path/to/synergy-remote
+   synergy plugin add file:///absolute/path/to/synergy-remote-tailscale
    ```
 
 2. Open **Settings → Plugins → Remote Access**.

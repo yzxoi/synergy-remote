@@ -88,11 +88,11 @@ const installContribution = lifecycleInstall({
 export const plugin = definePlugin({
   id: "synergy-remote-tailscale",
   name: "Synergy Remote Tailscale",
-  version: "0.1.0",
+  version: "0.2.0",
   description: "Secure remote access to Synergy via Tailscale",
   author: "EricSanchez",
   homepage: "https://github.com/EricSanchezok/synergy-remote",
-  compatibility: { synergy: ">=1.1.27" },
+  compatibility: { synergy: ">=3.0.11" },
   license: "MIT",
   keywords: ["synergy-plugin", "remote-access", "tailscale"],
   capabilities: [

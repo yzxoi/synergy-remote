@@ -1,7 +1,4 @@
-import type {
-  PluginInvocationContext,
-  PluginSettingsSurfaceContext,
-} from "@ericsanchezok/synergy-plugin";
+import type { PluginInvocationContext } from "@ericsanchezok/synergy-plugin";
 
 export type RemoteAccessPhase =
   | "not_installed"
@@ -44,11 +41,4 @@ export type RuntimeEndpoint = { url: string; generation: string };
 
 export type RemoteInvocationContext = PluginInvocationContext & {
   runtimeEndpoint?: { get(): Promise<RuntimeEndpoint> };
-};
-
-export type RemoteSettingsComponentProps = {
-  context: PluginSettingsSurfaceContext;
-  pluginId?: string;
-  values: Record<string, unknown>;
-  onChange(values: Record<string, unknown>): void | Promise<void>;
 };

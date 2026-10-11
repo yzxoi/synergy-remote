@@ -6,6 +6,7 @@ import type {
 } from "../types";
 import {
   parseObject,
+  parsePeers,
   parseServeRoutes,
   stringAt,
   type ServeRoute,
@@ -46,6 +47,12 @@ export class TailscaleManager {
       await this.snapshot(),
       await this.dependencies.state.read(),
     );
+  }
+
+  async devices() {
+    const result = await this.dependencies.adapter.run(["status", "--json"]);
+    if (result.exitCode !== 0) throw new Error(conciseError(result));
+    return parsePeers(parseObject(result.stdout));
   }
 
   async install(force = false): Promise<InstallResult> {
@@ -101,7 +108,11 @@ export class TailscaleManager {
     let selected: number | undefined;
     for (const port of candidates) {
       const route = snapshot.routes.get(port);
-      if (!route || ownsRoute(route, state) || routeMatchesTarget(route, target)) {
+      if (
+        !route ||
+        ownsRoute(route, state) ||
+        routeMatchesTarget(route, target)
+      ) {
         selected = port;
         break;
       }
@@ -118,9 +129,7 @@ export class TailscaleManager {
 
     const existing = snapshot.routes.get(selected);
     const alreadyServing =
-      existing &&
-      !existing.funnel &&
-      routeMatchesTarget(existing, target);
+      existing && !existing.funnel && routeMatchesTarget(existing, target);
 
     if (!alreadyServing) {
       const result = await this.dependencies.adapter.run([
@@ -176,11 +185,13 @@ export class TailscaleManager {
 
   async disable(): Promise<RemoteAccessStatus> {
     const state = await this.dependencies.state.read();
+    const intent = { ...state, enabled: false };
+    await this.dependencies.state.write(intent);
     const snapshot = await this.snapshot();
     if (!state.enabled && state.httpsPort === undefined)
-      return this.toStatus(snapshot, state);
+      return this.toStatus(snapshot, intent);
     if (!snapshot.installed || snapshot.errorCode)
-      return this.toStatus(snapshot, state);
+      return this.toStatus(snapshot, intent);
 
     const route =
       state.httpsPort === undefined
@@ -189,7 +200,7 @@ export class TailscaleManager {
     if (route && !ownsRoute(route, state)) {
       return conflictStatus(
         snapshot,
-        state,
+        intent,
         [state.httpsPort!],
         "The Tailscale Serve route changed after Synergy Remote created it.",
       );
@@ -205,7 +216,7 @@ export class TailscaleManager {
           "SERVE_DISABLE_FAILED",
           conciseError(result),
           snapshot,
-          state.enabled,
+          false,
           state.installAttempted,
         );
       }
@@ -228,7 +239,7 @@ export class TailscaleManager {
 
   async uninstall(): Promise<RemoteAccessStatus> {
     const status = await this.disable();
-    if (status.desiredEnabled) return status;
+    if (status.phase === "conflict" || status.phase === "error") return status;
     await this.dependencies.state.remove();
     return status;
   }
@@ -373,13 +384,15 @@ function routeMatchesTarget(route: ServeRoute, target: string) {
 
 function normalizedTarget(value: string) {
   const url = new URL(value);
-  return url.origin;
+  return (
+    url.origin + (url.pathname === "/" ? "" : url.pathname.replace(/\/$/, ""))
+  );
 }
 
 function targetFingerprint(target: string) {
   let normalized = target;
   try {
-    normalized = new URL(target).origin;
+    normalized = normalizedTarget(target);
   } catch {}
   return createHash("sha256").update(normalized).digest("hex");
 }
@@ -395,7 +408,7 @@ function safeEndpoint(value: string) {
         url.hostname === "localhost" ||
         url.hostname === "[::1]" ||
         url.hostname === "::1") &&
-      (url.pathname === "/" || url.pathname === "") &&
+      url.pathname === "/host-connection/gateway" &&
       !url.search &&
       !url.hash
     );

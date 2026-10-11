@@ -13,7 +13,6 @@ export type RemoteAccessPhase =
   | "conflict"
   | "error";
 
-
 export type RemoteAccessStatus = {
   provider: "tailscale";
   phase: RemoteAccessPhase;
@@ -48,7 +47,11 @@ export type RemoteInvocationContext = PluginInvocationContext & {
 
 export type RemoteSettingsComponentProps = {
   context: PluginSettingsSurfaceContext;
-  pluginId?: string;
-  values: Record<string, unknown>;
-  onChange(values: Record<string, unknown>): void | Promise<void>;
+};
+
+export type TailscalePeer = {
+  id: string;
+  name: string;
+  dnsName: string;
+  online: boolean;
 };

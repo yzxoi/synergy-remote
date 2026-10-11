@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { parsePeers } from "../src/tailscale/parsers";
 import { describe, expect, test } from "bun:test";
 import { TailscaleManager, type StateStore } from "../src/tailscale/manager";
 import type { TailscaleAdapter } from "../src/tailscale/system";
@@ -12,6 +14,7 @@ function fixture(
   } = {},
 ) {
   let state = input.state ?? { enabled: false, installAttempted: false };
+  let routes: Record<string, unknown> = input.routes ?? { Web: {} };
   let removed = false;
   let installs = 0;
   const commands: string[][] = [];
@@ -42,16 +45,26 @@ function fixture(
       if (args[0] === "serve" && args[1] === "status") {
         return {
           exitCode: 0,
-          stdout: JSON.stringify(input.routes ?? { Web: {} }),
+          stdout: JSON.stringify(routes),
           stderr: "",
         };
       }
       if (args[0] === "serve" && args[1] === "get-config") {
         return {
           exitCode: 0,
-          stdout: JSON.stringify(input.routes ?? { Web: {} }),
+          stdout: JSON.stringify(routes),
           stderr: "",
         };
+      }
+      if (args[0] === "serve") {
+        const port = Number(
+          args.find((arg) => arg.startsWith("--https="))?.split("=")[1],
+        );
+        const web = { ...(routes.Web as Record<string, unknown>) };
+        if (args.includes("--bg"))
+          web[`host:${port}`] = { Handlers: { "/": { Proxy: args.at(-1) } } };
+        if (args.at(-1) === "off") delete web[`host:${port}`];
+        routes = { ...routes, Web: web };
       }
       return { exitCode: 0, stdout: "", stderr: "" };
     },
@@ -71,7 +84,7 @@ function fixture(
       adapter,
       state: store,
       endpoint: () => ({
-        url: input.endpoint ?? "http://127.0.0.1:4096",
+        url: input.endpoint ?? "http://127.0.0.1:4096/host-connection/gateway",
         generation: "one",
       }),
     }),
@@ -93,7 +106,7 @@ describe("TailscaleManager", () => {
       "--bg",
       "--https=443",
       "--yes",
-      "http://127.0.0.1:4096",
+      "http://127.0.0.1:4096/host-connection/gateway",
     ]);
   });
 
@@ -132,10 +145,14 @@ describe("TailscaleManager", () => {
     const previous = first.state();
     const second = fixture({
       state: previous,
-      endpoint: "http://127.0.0.1:5099",
+      endpoint: "http://127.0.0.1:5099/host-connection/gateway",
       routes: {
         Web: {
-          "host:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:4096" } } },
+          "host:443": {
+            Handlers: {
+              "/": { Proxy: "http://127.0.0.1:4096/host-connection/gateway" },
+            },
+          },
         },
       },
     });
@@ -145,7 +162,7 @@ describe("TailscaleManager", () => {
       "--bg",
       "--https=443",
       "--yes",
-      "http://127.0.0.1:5099",
+      "http://127.0.0.1:5099/host-connection/gateway",
     ]);
     expect(second.commands.flat()).not.toContain("reset");
   });
@@ -157,6 +174,67 @@ describe("TailscaleManager", () => {
       phase: "error",
       errorCode: "UNSAFE_LISTENER",
     });
+  });
+
+  test("never exposes the ordinary listener and upgrades only its owned legacy Serve target", async () => {
+    await expect(
+      fixture({ endpoint: "http://127.0.0.1:4096" }).manager.enable(),
+    ).resolves.toMatchObject({ errorCode: "UNSAFE_LISTENER" });
+    const legacy = fixture({
+      state: {
+        enabled: true,
+        installAttempted: false,
+        httpsPort: 443,
+        lastTargetFingerprint: createHash("sha256")
+          .update("http://127.0.0.1:4096")
+          .digest("hex"),
+      },
+      routes: {
+        Web: {
+          "host:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:4096" } } },
+        },
+      },
+    });
+    await expect(legacy.manager.reconcile()).resolves.toMatchObject({
+      phase: "active",
+    });
+    expect(legacy.commands).toContainEqual([
+      "serve",
+      "--bg",
+      "--https=443",
+      "--yes",
+      "http://127.0.0.1:4096/host-connection/gateway",
+    ]);
+  });
+
+  test("discovery filters untrusted addresses and retains offline devices", () => {
+    expect(
+      parsePeers({
+        Peer: {
+          a: {
+            HostName: "Laptop",
+            DNSName: "laptop.example.ts.net.",
+            Online: true,
+          },
+          b: { DNSName: "desktop.example.ts.net", Online: false },
+          c: { DNSName: "evil.test/path" },
+          d: null,
+        },
+      }),
+    ).toEqual([
+      {
+        id: "a",
+        name: "Laptop",
+        dnsName: "laptop.example.ts.net",
+        online: true,
+      },
+      {
+        id: "b",
+        name: "desktop.example.ts.net",
+        dnsName: "desktop.example.ts.net",
+        online: false,
+      },
+    ]);
   });
 
   test("uses a custom port only when requested and treats Funnel as occupied", async () => {
@@ -181,7 +259,7 @@ describe("TailscaleManager", () => {
       "--bg",
       "--https=9443",
       "--yes",
-      "http://127.0.0.1:4096",
+      "http://127.0.0.1:4096/host-connection/gateway",
     ]);
   });
 
@@ -194,7 +272,11 @@ describe("TailscaleManager", () => {
       state: ownedState,
       routes: {
         Web: {
-          "host:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:4096" } } },
+          "host:443": {
+            Handlers: {
+              "/": { Proxy: "http://127.0.0.1:4096/host-connection/gateway" },
+            },
+          },
         },
       },
     });
@@ -212,7 +294,7 @@ describe("TailscaleManager", () => {
     });
     await expect(modified.manager.uninstall()).resolves.toMatchObject({
       phase: "conflict",
-      desiredEnabled: true,
+      desiredEnabled: false,
     });
     expect(modified.removed()).toBe(false);
     expect(modified.commands.some((command) => command.at(-1) === "off")).toBe(
@@ -264,7 +346,9 @@ describe("TailscaleManager", () => {
       routes: {
         Web: {
           "host:443": {
-            Handlers: { "/": { Proxy: "http://127.0.0.1:4096" } },
+            Handlers: {
+              "/": { Proxy: "http://127.0.0.1:4096/host-connection/gateway" },
+            },
           },
         },
       },

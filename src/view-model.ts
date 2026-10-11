@@ -25,7 +25,10 @@ export function needsCustomPort(status: RemoteAccessStatus | undefined) {
 export function canEnable(status: RemoteAccessStatus | undefined) {
   if (!status) return false;
   if (status.phase === "active") return false;
-  if (status.phase === "error" && status.errorCode === "SERVE_DISABLED_ON_TAILNET") {
+  if (
+    status.phase === "error" &&
+    status.errorCode === "SERVE_DISABLED_ON_TAILNET"
+  ) {
     return status.installed && status.loggedIn && status.online;
   }
   return Boolean(
@@ -154,9 +157,9 @@ export const copy = {
     intro:
       "Use Tailscale Serve to reach this Synergy instance securely from other devices on the same tailnet. Install and sign in first, then enable remote access.",
     warning:
-      "This address exposes the entire Synergy instance. Every user allowed by your tailnet ACL may be able to access it.",
+      "Only confirmed paired devices can access tasks and files. Review and revoke devices in the list below. Tailnet ACLs also apply.",
     warningBeforeEnable:
-      "Installing alone does not expose the instance. After you enable remote access, the address will expose the entire Synergy instance to users allowed by your tailnet ACL. Synergy Remote never enables Funnel.",
+      "Enabling publishes a pairing gateway inside your tailnet. Remote task and file access requires confirmation on this device. Synergy Remote never enables Funnel.",
     safetyTitle: "Security boundary",
     status: "Status",
     overview: "Overview",
@@ -188,9 +191,9 @@ export const copy = {
     confirmInstallTitle: "Install Tailscale?",
     confirmInstall:
       "Synergy will start the supported platform installer or open the official Tailscale download page. System approval may be required.",
-    confirmEnableTitle: "Expose this Synergy instance?",
+    confirmEnableTitle: "Enable device pairing?",
     confirmEnable:
-      "The complete instance will become reachable by users allowed by your Tailscale ACL. Synergy Remote never enables Funnel.",
+      "Devices must pass your Tailscale ACL and be explicitly paired before accessing tasks and files. Synergy Remote never enables Funnel.",
     confirmDisableTitle: "Disable remote access?",
     confirmDisable:
       "Only the verified Tailscale Serve route created by Synergy Remote will be removed.",
@@ -232,7 +235,7 @@ export const copy = {
       ready:
         "Tailscale is ready. Enable remote access to publish the private HTTPS address.",
       active:
-        "Remote access is active. On another device with Tailscale signed in to the same tailnet, open the address below.",
+        "Remote access is active. Pair the other Synergy device below, then choose it in the device selector or task migration menu.",
       conflict:
         "The preferred HTTPS ports are already used by another route. Choose a free port to continue.",
       error:
@@ -265,7 +268,7 @@ export const copy = {
       ],
       active: [
         "On the device you want to access from, install Tailscale and sign in with the same account or join the same tailnet.",
-        "Confirm that device is connected, then open the address above in its browser.",
+        "Enable Synergy Remote on both devices, then pair them using the Devices section below.",
         "Disable remote access here when you no longer need it.",
       ],
       conflict: [
@@ -294,7 +297,8 @@ export const copy = {
       installBodyGeneric:
         "Complete the install steps in the system window that opened.",
       loginTitle: "Sign in to Tailscale",
-      loginBody: "Open the client and join your tailnet after install finishes.",
+      loginBody:
+        "Open the client and join your tailnet after install finishes.",
       enableTitle: "Enable remote access",
       enableBody: "Create the private HTTPS address. Funnel stays off.",
     },
@@ -305,9 +309,9 @@ export const copy = {
     intro:
       "用 Tailscale Serve，从同一 tailnet 的其他设备安全访问这台 Synergy。先完成安装与登录，再启用远程访问。",
     warning:
-      "此地址会暴露整个 Synergy 实例。所有被 tailnet ACL 允许的用户都可能访问它。",
+      "只有已确认配对的设备可以访问任务和文件。请在下方设备列表管理和撤销配对，tailnet ACL 同时生效。",
     warningBeforeEnable:
-      "安装本身不会暴露实例。启用后，地址会把整个 Synergy 实例开放给 tailnet ACL 允许的用户。Synergy Remote 永远不会启用 Funnel。",
+      "启用后会在 tailnet 内发布配对网关。远程访问任务和文件前，需要在本设备确认配对。Synergy Remote 永远不会启用 Funnel。",
     safetyTitle: "启用前的安全边界",
     status: "状态",
     overview: "概览",
@@ -341,7 +345,7 @@ export const copy = {
       "Synergy 将启动当前平台支持的安装器，或打开 Tailscale 官方下载页；系统可能要求确认。",
     confirmEnableTitle: "开放此 Synergy 实例？",
     confirmEnable:
-      "整个实例将允许被 Tailscale ACL 授权的用户访问。Synergy Remote 永远不会启用 Funnel。",
+      "远端设备需要同时通过 Tailscale ACL 和本设备的配对确认，才能访问任务和文件。Synergy Remote 永远不会启用 Funnel。",
     confirmDisableTitle: "停用远程访问？",
     confirmDisable:
       "只会删除经核验确由 Synergy Remote 创建的 Tailscale Serve 规则。",
@@ -381,7 +385,8 @@ export const copy = {
       offline:
         "Tailscale 已安装但当前离线。请确保 Tailscale 正在运行并已连接。",
       ready: "Tailscale 已就绪。启用远程访问即可发布私有 HTTPS 地址。",
-      active: "远程访问已启用。在其他已登录同一 tailnet 的设备上打开下面的地址。",
+      active:
+        "远程访问已启用。在下方配对另一台 Synergy 设备，然后在设备选择器或任务迁移菜单中选择它。",
       conflict: "首选 HTTPS 端口已被其他路由占用。请选择一个空闲端口继续。",
       error:
         "远程访问需要处理。若 tailnet 未开启 Serve，请在 Synergy 打开的管理页允许 Serve，然后点「重试启用」。",
@@ -413,7 +418,7 @@ export const copy = {
       ],
       active: [
         "在要访问的这台设备上安装 Tailscale，并登录同一账号（或加入同一 tailnet）。",
-        "确认该设备已连接后，用浏览器打开上面的地址。",
+        "在两台设备上启用 Synergy Remote，然后在下方设备区域完成配对。",
         "不再需要时，可在这里停用远程访问。",
       ],
       conflict: [

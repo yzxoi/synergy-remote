@@ -53,7 +53,7 @@ describe("RemoteRuntimeController", () => {
     const controller = new RemoteRuntimeController(store, adapter, timers);
     try {
       await controller.start({
-        url: "http://127.0.0.1:4096",
+        url: "http://127.0.0.1:4096/host-connection/gateway",
         generation: "one",
       });
       expect(scheduled.at(-1)?.delayMs).toBe(5_000);
@@ -72,8 +72,8 @@ describe("RemoteRuntimeController endpoint refresh", () => {
       path.join(os.tmpdir(), "synergy-remote-tailscale-runtime-"),
     );
     const store = new RemoteStateStore(path.join(directory, "state.json"));
-    const oldTarget = "http://127.0.0.1:4096";
-    const newTarget = "http://127.0.0.1:54641";
+    const oldTarget = "http://127.0.0.1:4096/host-connection/gateway";
+    const newTarget = "http://127.0.0.1:54641/host-connection/gateway";
     const oldFingerprint = createHash("sha256").update(oldTarget).digest("hex");
     await store.write({
       enabled: true,

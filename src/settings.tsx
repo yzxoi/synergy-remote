@@ -8,6 +8,7 @@ import {
   type Component,
   type JSX,
 } from "solid-js";
+import { DeviceSettings } from "./devices";
 import {
   canEnable,
   copy,
@@ -97,9 +98,7 @@ const STYLES = `
 `;
 
 const Settings: Component<RemoteSettingsComponentProps> = (props) => {
-  const locale = localeFromLanguage(
-    document.documentElement.lang || navigator.language,
-  );
+  const locale = localeFromLanguage(props.context.environment.locale());
   const text = copy[locale];
   const [status, setStatus] = createSignal<RemoteAccessStatus>();
   const [busy, setBusy] = createSignal<string>();
@@ -113,18 +112,18 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
   });
   const actions = createActionRunner({
     operations: props.context.operations,
-    confirm: props.context.host.confirm,
+    confirm: props.context.overlays.confirm,
     onBusy: setBusy,
     onStatus: setStatus,
     onError(message) {
       setError(message);
-      if (message) props.context.host.notify(message, { kind: "error" });
+      if (message) props.context.overlays.notify(message, { kind: "error" });
     },
     onLaunched: () =>
-      props.context.host.notify(text.launched, { kind: "success" }),
+      props.context.overlays.notify(text.launched, { kind: "success" }),
     onInstallResult(result) {
       if (result.launched) {
-        props.context.host.notify(
+        props.context.overlays.notify(
           result.mode === "automatic"
             ? text.launchedAutomatic
             : text.launchedGuided,
@@ -132,7 +131,7 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
         );
       } else {
         setError(text.installAlreadyStarted);
-        props.context.host.notify(text.installAlreadyStarted, {
+        props.context.overlays.notify(text.installAlreadyStarted, {
           kind: "warning",
         });
       }
@@ -207,10 +206,7 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
           <h2 class="sr-title">{text.title}</h2>
           <p class="sr-intro">{text.intro}</p>
         </div>
-        <Show
-          when={status()}
-          fallback={<span class="sr-pill">…</span>}
-        >
+        <Show when={status()} fallback={<span class="sr-pill">…</span>}>
           {(current) => (
             <span class="sr-pill" data-tone={tone()}>
               <span
@@ -248,237 +244,242 @@ const Settings: Component<RemoteSettingsComponentProps> = (props) => {
               </p>
             </div>
 
-          <Show when={showSetup()}>
-            <ol class="sr-steps" aria-label={text.installProgress}>
-              <For each={steps()}>
-                {(step, index) => (
-                  <li class="sr-step" data-state={step.state}>
-                    <div class="sr-step-rail">
-                      <StepMarker state={step.state} index={index() + 1} />
-                    </div>
-                    <div class="sr-step-body">
-                      <div class="sr-step-title">{step.title}</div>
-                      <p class="sr-step-copy">{step.body}</p>
-                    </div>
-                  </li>
-                )}
-              </For>
-            </ol>
-          </Show>
-
-          <Show when={status()?.publicUrl}>
-            {(url) => (
-              <div class="sr-url">
-                <code>{url()}</code>
-                <div class="sr-actions">
-                  <SecondaryButton
-                    onClick={() => {
-                      void copyText(url()).then((ok) =>
-                        props.context.host.notify(
-                          ok ? text.copied : text.copyFailed,
-                          { kind: ok ? "success" : "error" },
-                        ),
-                      );
-                    }}
-                  >
-                    {text.copy}
-                  </SecondaryButton>
-                  <a class="sr-link" href={url()} rel="noreferrer" target="_blank">
-                    {text.open}
-                  </a>
-                </div>
-              </div>
-            )}
-          </Show>
-
-          <Show when={needsCustomPort(status())}>
-            <label class="sr-field">
-              {text.customPort}
-              <input
-                min="1024"
-                max="65535"
-                type="number"
-                value={customPort()}
-                onInput={(event) => setCustomPort(event.currentTarget.value)}
-              />
-            </label>
-          </Show>
-
-          <div
-            class="sr-callout"
-            data-tone={phase() === "active" ? "success" : undefined}
-          >
-            <strong>
-              {phase() === "installing" || phase() === "not_installed"
-                ? text.nowDoTitle
-                : phase() === "active"
-                  ? text.activeAccessTitle
-                  : text.overview}
-            </strong>
-            <ul>
-              <For each={[...nowDo()]}>{(item) => <li>{item}</li>}</For>
-            </ul>
-          </div>
-
-          <Show when={status()?.message || error()}>
-            <p class="sr-error" role="alert">
-              {error() ?? status()?.message}
-            </p>
-          </Show>
-
-          <div class="sr-actions">
-            <Show when={installAction(status()) === "install"}>
-              <PrimaryButton
-                disabled={Boolean(busy())}
-                onClick={() =>
-                  void actions.confirmAndRun("remote.install", {
-                    title: text.confirmInstallTitle,
-                    message: text.confirmInstall,
-                  })
-                }
-              >
-                {text.install}
-              </PrimaryButton>
-            </Show>
-            <Show when={installAction(status()) === "waiting"}>
-              <PrimaryButton disabled>{text.waitingForTailscale}</PrimaryButton>
-              <SecondaryButton
-                disabled={Boolean(busy())}
-                onClick={() =>
-                  void actions.confirmAndRun("remote.install", {
-                    title: text.confirmInstallTitle,
-                    message: text.confirmInstall,
-                  })
-                }
-              >
-                {text.retryInstall}
-              </SecondaryButton>
-              <GhostButton
-                disabled={Boolean(busy())}
-                onClick={() => void polling.refresh()}
-              >
-                {text.refreshStatus}
-              </GhostButton>
-            </Show>
-            <Show
-              when={
-                status()?.installed &&
-                (!status()?.loggedIn || status()?.phase === "offline")
-              }
-            >
-              <PrimaryButton
-                disabled={Boolean(busy())}
-                onClick={() => void actions.run("remote.login")}
-              >
-                {text.login}
-              </PrimaryButton>
-            </Show>
-            <Show when={canEnable(status())}>
-              <PrimaryButton
-                disabled={
-                  Boolean(busy()) ||
-                  (needsCustomPort(status()) && !validCustomPort(customPort()))
-                }
-                onClick={() => {
-                  const port = needsCustomPort(status())
-                    ? Number(customPort())
-                    : undefined;
-                  void actions.confirmAndRun(
-                    "remote.enable",
-                    {
-                      title: text.confirmEnableTitle,
-                      message: text.confirmEnable,
-                    },
-                    port ? { httpsPort: port } : {},
-                  );
-                }}
-              >
-                {isServeDisabledError(status())
-                  ? text.retryEnable
-                  : text.enable}
-              </PrimaryButton>
-            </Show>
-            <Show
-              when={isServeDisabledError(status()) && serveAdminUrl(status())}
-            >
-              <SecondaryButton
-                disabled={Boolean(busy())}
-                onClick={() => {
-                  const url = serveAdminUrl(status());
-                  if (url) window.open(url, "_blank", "noreferrer");
-                }}
-              >
-                {text.openServeAdmin}
-              </SecondaryButton>
-            </Show>
-            <Show when={status()?.phase === "active" || status()?.desiredEnabled}>
-              <SecondaryButton
-                disabled={Boolean(busy())}
-                onClick={() =>
-                  void actions.confirmAndRun("remote.disable", {
-                    title: text.confirmDisableTitle,
-                    message: text.confirmDisable,
-                    confirmLabel: text.disable,
-                  })
-                }
-              >
-                {text.disable}
-              </SecondaryButton>
-            </Show>
-            <Show
-              when={
-                error() ||
-                status()?.phase === "offline" ||
-                status()?.phase === "error" ||
-                status()?.phase === "conflict" ||
-                status()?.phase === "ready"
-              }
-            >
-              <GhostButton
-                disabled={Boolean(busy())}
-                onClick={() => void polling.refresh()}
-              >
-                {text.refreshStatus}
-              </GhostButton>
-            </Show>
-          </div>
-        </section>
-
-        <Show when={showSetup()}>
-          <aside class="sr-card" data-soft="true">
-            <div>
-              <h3 class="sr-card-title">{text.installDetails}</h3>
-              <p class="sr-card-copy">
-                {phase() === "installing"
-                  ? text.phaseDescriptions.installing
-                  : text.phaseDescriptions[status()?.phase ?? "not_installed"]}
-              </p>
-            </div>
-
-            <dl class="sr-meta">
-              <For each={detailRows()}>
-                {(row) => (
-                  <div class="sr-meta-row">
-                    <dt>{row[0]}</dt>
-                    <dd>{row[1]}</dd>
-                  </div>
-                )}
-              </For>
-            </dl>
-
-            <div class="sr-callout">
-              <strong>{text.afterInstallTitle}</strong>
-              <ul>
-                <For each={[...text.afterInstall]}>
-                  {(item) => <li>{item}</li>}
+            <Show when={showSetup()}>
+              <ol class="sr-steps" aria-label={text.installProgress}>
+                <For each={steps()}>
+                  {(step, index) => (
+                    <li class="sr-step" data-state={step.state}>
+                      <div class="sr-step-rail">
+                        <StepMarker state={step.state} index={index() + 1} />
+                      </div>
+                      <div class="sr-step-body">
+                        <div class="sr-step-title">{step.title}</div>
+                        <p class="sr-step-copy">{step.body}</p>
+                      </div>
+                    </li>
+                  )}
                 </For>
+              </ol>
+            </Show>
+
+            <Show when={status()?.publicUrl}>
+              {(url) => (
+                <div class="sr-url">
+                  <code>{url()}</code>
+                  <div class="sr-actions">
+                    <SecondaryButton
+                      onClick={() => {
+                        void copyText(url()).then((ok) =>
+                          props.context.overlays.notify(
+                            ok ? text.copied : text.copyFailed,
+                            { kind: ok ? "success" : "error" },
+                          ),
+                        );
+                      }}
+                    >
+                      {text.copy}
+                    </SecondaryButton>
+                  </div>
+                </div>
+              )}
+            </Show>
+
+            <Show when={needsCustomPort(status())}>
+              <label class="sr-field">
+                {text.customPort}
+                <input
+                  min="1024"
+                  max="65535"
+                  type="number"
+                  value={customPort()}
+                  onInput={(event) => setCustomPort(event.currentTarget.value)}
+                />
+              </label>
+            </Show>
+
+            <div
+              class="sr-callout"
+              data-tone={phase() === "active" ? "success" : undefined}
+            >
+              <strong>
+                {phase() === "installing" || phase() === "not_installed"
+                  ? text.nowDoTitle
+                  : phase() === "active"
+                    ? text.activeAccessTitle
+                    : text.overview}
+              </strong>
+              <ul>
+                <For each={[...nowDo()]}>{(item) => <li>{item}</li>}</For>
               </ul>
             </div>
-          </aside>
-        </Show>
+
+            <Show when={status()?.message || error()}>
+              <p class="sr-error" role="alert">
+                {error() ?? status()?.message}
+              </p>
+            </Show>
+
+            <div class="sr-actions">
+              <Show when={installAction(status()) === "install"}>
+                <PrimaryButton
+                  disabled={Boolean(busy())}
+                  onClick={() =>
+                    void actions.confirmAndRun("remote.install", {
+                      title: text.confirmInstallTitle,
+                      message: text.confirmInstall,
+                    })
+                  }
+                >
+                  {text.install}
+                </PrimaryButton>
+              </Show>
+              <Show when={installAction(status()) === "waiting"}>
+                <PrimaryButton disabled>
+                  {text.waitingForTailscale}
+                </PrimaryButton>
+                <SecondaryButton
+                  disabled={Boolean(busy())}
+                  onClick={() =>
+                    void actions.confirmAndRun("remote.install", {
+                      title: text.confirmInstallTitle,
+                      message: text.confirmInstall,
+                    })
+                  }
+                >
+                  {text.retryInstall}
+                </SecondaryButton>
+                <GhostButton
+                  disabled={Boolean(busy())}
+                  onClick={() => void polling.refresh()}
+                >
+                  {text.refreshStatus}
+                </GhostButton>
+              </Show>
+              <Show
+                when={
+                  status()?.installed &&
+                  (!status()?.loggedIn || status()?.phase === "offline")
+                }
+              >
+                <PrimaryButton
+                  disabled={Boolean(busy())}
+                  onClick={() => void actions.run("remote.login")}
+                >
+                  {text.login}
+                </PrimaryButton>
+              </Show>
+              <Show when={canEnable(status())}>
+                <PrimaryButton
+                  disabled={
+                    Boolean(busy()) ||
+                    (needsCustomPort(status()) &&
+                      !validCustomPort(customPort()))
+                  }
+                  onClick={() => {
+                    const port = needsCustomPort(status())
+                      ? Number(customPort())
+                      : undefined;
+                    void actions.confirmAndRun(
+                      "remote.enable",
+                      {
+                        title: text.confirmEnableTitle,
+                        message: text.confirmEnable,
+                      },
+                      port ? { httpsPort: port } : {},
+                    );
+                  }}
+                >
+                  {isServeDisabledError(status())
+                    ? text.retryEnable
+                    : text.enable}
+                </PrimaryButton>
+              </Show>
+              <Show
+                when={isServeDisabledError(status()) && serveAdminUrl(status())}
+              >
+                <SecondaryButton
+                  disabled={Boolean(busy())}
+                  onClick={() => {
+                    const url = serveAdminUrl(status());
+                    if (url) window.open(url, "_blank", "noreferrer");
+                  }}
+                >
+                  {text.openServeAdmin}
+                </SecondaryButton>
+              </Show>
+              <Show
+                when={status()?.phase === "active" || status()?.desiredEnabled}
+              >
+                <SecondaryButton
+                  disabled={Boolean(busy())}
+                  onClick={() =>
+                    void actions.confirmAndRun("remote.disable", {
+                      title: text.confirmDisableTitle,
+                      message: text.confirmDisable,
+                      confirmLabel: text.disable,
+                    })
+                  }
+                >
+                  {text.disable}
+                </SecondaryButton>
+              </Show>
+              <Show
+                when={
+                  error() ||
+                  status()?.phase === "offline" ||
+                  status()?.phase === "error" ||
+                  status()?.phase === "conflict" ||
+                  status()?.phase === "ready"
+                }
+              >
+                <GhostButton
+                  disabled={Boolean(busy())}
+                  onClick={() => void polling.refresh()}
+                >
+                  {text.refreshStatus}
+                </GhostButton>
+              </Show>
+            </div>
+          </section>
+
+          <Show when={showSetup()}>
+            <aside class="sr-card" data-soft="true">
+              <div>
+                <h3 class="sr-card-title">{text.installDetails}</h3>
+                <p class="sr-card-copy">
+                  {phase() === "installing"
+                    ? text.phaseDescriptions.installing
+                    : text.phaseDescriptions[
+                        status()?.phase ?? "not_installed"
+                      ]}
+                </p>
+              </div>
+
+              <dl class="sr-meta">
+                <For each={detailRows()}>
+                  {(row) => (
+                    <div class="sr-meta-row">
+                      <dt>{row[0]}</dt>
+                      <dd>{row[1]}</dd>
+                    </div>
+                  )}
+                </For>
+              </dl>
+
+              <div class="sr-callout">
+                <strong>{text.afterInstallTitle}</strong>
+                <ul>
+                  <For each={[...text.afterInstall]}>
+                    {(item) => <li>{item}</li>}
+                  </For>
+                </ul>
+              </div>
+            </aside>
+          </Show>
         </div>
       </Show>
 
+      <DeviceSettings context={props.context} />
       <aside class="sr-safety">
         <div class="sr-shield" aria-hidden="true">
           ⌀

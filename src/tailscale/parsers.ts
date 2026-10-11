@@ -4,6 +4,23 @@ export type ServeRoute = {
   funnel: boolean;
 };
 
+export function parsePeers(input: Record<string, unknown>) {
+  const peers = record(input.Peer) ?? {};
+  return Object.entries(peers).flatMap(([id, raw]) => {
+    const peer = record(raw);
+    const dnsName = stringAt(peer ?? {}, "DNSName")?.replace(/\.$/, "");
+    if (!dnsName || !/^[a-zA-Z0-9.-]+\.ts\.net$/.test(dnsName)) return [];
+    return [
+      {
+        id,
+        name: stringAt(peer!, "HostName") ?? dnsName,
+        dnsName,
+        online: peer?.Online === true,
+      },
+    ];
+  });
+}
+
 function record(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
